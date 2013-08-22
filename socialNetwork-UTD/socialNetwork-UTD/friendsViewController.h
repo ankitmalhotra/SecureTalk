@@ -12,17 +12,22 @@
 #import "userChatViewController.h"
 #import "messengerChatDelegate.h"
 #import "loginViewController.h"
+#import "messengerRESTclient.h"
 
 @class messengerViewController;
 @class userChatViewController;
 @class loginViewController;
+@class messengerRESTclient;
 
 
 @interface friendsViewController : UIViewController
-        <UITableViewDataSource,UITableViewDelegate,messengerChatDelegate>
+        <UITableViewDataSource,UITableViewDelegate,UITabBarDelegate,messengerChatDelegate>
 {
     IBOutlet UITableView *tabVw;
     IBOutlet UIBarButtonItem *addFriend;
+    IBOutlet UITabBar *chatStatusTab;
+    IBOutlet UITabBarItem *chatStatusBarItem;
+    
     UIRefreshControl *refreshControl;
     
     NSArray *friendList;
@@ -33,15 +38,17 @@
     messengerViewController *mainViewObj;
     userChatViewController *userChatObj;
     loginViewController *loginViewObj;
+    messengerRESTclient *restObj;
 }
 
 -(IBAction)backToMain;
 -(IBAction)addFriend;
 -(void)refreshUI;
-//-(void)getFriendNumbers: (NSArray *)friendNum;
+-(void)receiveAllBuddies: (NSMutableArray *)allBuddyList;
 -(void)sendBuddyRequest: (NSString *)name;
 -(void)setOnline: (NSString *)buddyName;
 -(void)setOffline: (NSString *)buddyName;
-
+-(void)setAllOffline;
+;
 
 @end

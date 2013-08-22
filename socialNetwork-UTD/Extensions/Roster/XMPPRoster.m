@@ -83,6 +83,7 @@ enum XMPPRosterFlags
 
 - (BOOL)activate:(XMPPStream *)aXmppStream
 {
+    NSLog(@"activated xmpp stream !!");
 	XMPPLogTrace();
 	
 	if ([super activate:aXmppStream])
@@ -417,6 +418,7 @@ enum XMPPRosterFlags
 	//     </item>
 	//   </query>
 	// </iq>
+    
 
 	NSXMLElement *item = [NSXMLElement elementWithName:@"item"];
 	[item addAttributeWithName:@"jid" stringValue:[jid bare]];
@@ -440,12 +442,26 @@ enum XMPPRosterFlags
 	[iq addChild:query];
 
     NSLog(@"i've built xml: %@",iq);
+    if (xmppStream)
+    {
+        NSLog(@"stream jid: %@",[xmppStream myJID]);
+    }
+    else
+    {
+        NSLog(@"stream invalid: %@",[xmppStream myJID]);
+    }
+    
 	[xmppStream sendElement:iq];
 
 	if(subscribe)
 	{
+        NSLog(@"subscribing is success");
 		[self subscribePresenceToUser:jid];
 	}
+    else
+    {
+        NSLog(@"subscribing is failed"); 
+    }
 }
 
 - (void)setNickname:(NSString *)nickname forUser:(XMPPJID *)jid
@@ -477,6 +493,8 @@ enum XMPPRosterFlags
 {
 	// This is a public method, so it may be invoked on any thread/queue.
 	
+    NSLog(@"lets chk jid..:%@",jid);
+    
 	if (jid == nil) return;
 	
 	XMPPJID *myJID = xmppStream.myJID;
@@ -491,6 +509,8 @@ enum XMPPRosterFlags
 	
 	XMPPPresence *presence = [XMPPPresence presenceWithType:@"subscribe" to:[jid bareJID]];
 	[xmppStream sendElement:presence];
+    
+    NSLog(@"the presence sent is: %@",presence);
 }
 
 - (void)unsubscribePresenceFromUser:(XMPPJID *)jid
@@ -573,6 +593,7 @@ enum XMPPRosterFlags
 
 - (void)acceptPresenceSubscriptionRequestFrom:(XMPPJID *)jid andAddToRoster:(BOOL)flag
 {
+    NSLog(@"acceptance done..");
 	// This is a public method, so it may be invoked on any thread/queue.
 	
 	// Send presence response
@@ -585,9 +606,12 @@ enum XMPPRosterFlags
     //NSLog(@"i just subscribed to: %@",[jid bareJID]);
 	// Add optionally add user to our roster
 	
+    NSLog(@"flag:%c",flag);
+    
 	if (flag)
 	{
-		[self addUser:jid withNickname:nil];
+        NSLog(@"flag is set");
+		[self addUser:jid withNickname:[jid description]];
 	}
 }
 
@@ -766,7 +790,7 @@ enum XMPPRosterFlags
 		else
 		{
 			// Presence subscription request from someone who's NOT in our roster
-			
+			NSLog(@"executing fine..");
 			[multicastDelegate xmppRoster:self didReceivePresenceSubscriptionRequest:presence];
 		}
 	}

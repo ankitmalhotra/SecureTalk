@@ -39,7 +39,6 @@
 }
 
 -(IBAction)backToMain;
--(void)refreshUI;
 -(void)getFriendNumbers: (NSMutableArray *)friendNum;
 -(void)setFriendUserId: (NSMutableArray *)friendUserId;
 

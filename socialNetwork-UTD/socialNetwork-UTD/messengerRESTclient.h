@@ -29,8 +29,8 @@
     double elapsedConnDuration;
 }
 
+
 /*User specific endpoints*/
-//-(void)sendMessage :(NSString *)userID :(NSString *)userName :(NSString *)password :(NSString *)emailID :(NSString *)devToken :(NSString *)endPointURL;
 -(void)addNewUser :(NSString *)userID :(NSString *)userName :(NSString *)password :(NSString *)emailID :(NSString *)devToken :(NSString *)endPointURL;
 -(void)userLogin :(NSString *)userID :(NSString *)password :(NSString *)endPointURL;
 
@@ -43,10 +43,26 @@
 -(void)showMyGroups :(NSString *)userNumber :(double)locationLat :(double)locationLong :(NSString *)accessToken :(NSString *)endPointURL;
 -(void)showAllGroups:(NSString *)userNumber :(double)locationLat :(double)locationLong :(NSString *)accessToken :(NSString *)endPointURL;
 -(void)joinGroup: (NSString *)userNumber :(NSString *)groupNumber :(double)locationLatitude :(double)locationLongitude :(NSString *)groupPassword :(NSString *)accessToken :(NSString *)endPointURL;
+-(void)unjoinGroups:(NSString *)userNumber :(NSString *)groupNumber :(NSString *)accessToken :(NSString *)endPointURL;
 
 /*Friend/Chat specific endpoints*/
 -(void)getFriendList: (NSString *)userNumber :(NSString *)groupNumber :(double)locationLatitude :(double)locationLongitude :(NSString *)accessToken :(NSString *)endPointURL;
 -(void)chatMessage :(NSString *)senderNumber :(NSString *)receiverNumber :(NSString *)chatMessageData :(NSString *)endPointURL;
+
+/*Change user's password endpoint*/
+-(void)changeUserPassword :(NSString *)userNumber :(NSString *)userPassword :(NSString *)newPassword :(NSString *)accessToken :(NSString *)endPointURL;
+
+/*Change user's email address endpoint*/
+-(void)changeUserEmailAddress :(NSString *)userNumber :(NSString *)userPassword :(NSString *)emailAddress :(NSString *)accessToken :(NSString *)endPointURL;
+
+/*Wipe all user data endpoint*/
+-(void)wipeData :(NSString *)userNumber :(NSString *)userPassword :(NSString *)accessToken :(NSString *)endPointURL;
+
+/*User roster from XMPP server*/
+-(void)userRoster :(NSString *)userNumber :(NSString *)userName :(NSString *)accessToken :(NSString *)endPointURL;
+
+/*Forgot Password*/
+-(void)recoverPassword :(NSString *)userId :(NSString *)emailAddress :(NSString *)endPointURL;
 
 /*Generic local functions*/
 -(void)getUserID :(NSString *)userNumber :(NSString *)endPointURL;

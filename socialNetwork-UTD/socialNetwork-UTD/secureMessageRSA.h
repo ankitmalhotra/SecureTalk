@@ -10,7 +10,6 @@
 
 @interface secureMessageRSA : NSObject
 
-
 +(void)generateKeyPairs;
 +(void)encryptMessage:(NSString *)message;
 +(void)decryptMessage;

@@ -15,7 +15,7 @@
 @class messengerRESTclient;
 @class messengerViewController;
 
-@interface loginViewController : UIViewController
+@interface loginViewController : UIViewController<UIAlertViewDelegate,UITextFieldDelegate>
 {
     IBOutlet UIView *loginView;
     IBOutlet UIButton *loginBtn;
@@ -23,18 +23,29 @@
     IBOutlet UITextField *nameField;
     IBOutlet UITextField *passwordField;
     IBOutlet UIActivityIndicatorView *spinningView;
+    IBOutlet UIButton *forgotPasswordBtn;
+    
     int retVal;
     
+    UIView *forgotPasswordView;
+    UILabel *viewLabel;
+    UITextField *usernameField;
+    UITextField *emailField;
+    UIButton *sendPasswordBtn;
+    UIButton *closeBtn;
+    
     messengerRESTclient *restObj;
-    messengerViewController *obj;
+    messengerViewController *mainViewObj;
 }
 -(IBAction)loginUser;
 -(IBAction)signupUser;
+-(IBAction)forgotPassword;
 -(IBAction)returnKeyBoard:(id)sender;
 -(IBAction)backgroundTouched:(id)sender;
 -(NSString *)getXmppJID;
 -(NSString *)getXmppPwd;
--(void)loginRecurRetry;
+-(void)sendPasswordToServer;
+-(void)closeView;
 
 
 @end

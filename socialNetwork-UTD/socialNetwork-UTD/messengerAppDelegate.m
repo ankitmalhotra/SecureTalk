@@ -27,6 +27,8 @@ static NSString *msg;
 static NSString *from;
 static NSData *devToken;
 
+
+
 @interface messengerAppDelegate()
 - (void)setupStream;
 - (void)setupRoster;
@@ -39,9 +41,8 @@ static NSData *devToken;
 
 @implementation messengerAppDelegate
 
-@synthesize locationManager=_locationManager;
 @synthesize _chatDelegate, _messageDelegate;
-@synthesize xmppRosterStorage,xmppStream,xmppRoster;
+@synthesize xmppRosterStorage,xmppRoster,xmppStream;
 
 
 // Log levels: off, error, warn, info, verbose
@@ -52,6 +53,16 @@ static const int ddLogLevel = LOG_LEVEL_INFO;
 #endif
 
 
+-(messengerViewController *)demoController
+{
+    return [[messengerViewController alloc] initWithNibName:@"messengerViewController" bundle:nil];
+}
+
+- (UINavigationController *)navigationController
+{
+    return [[UINavigationController alloc]
+            initWithRootViewController:[self demoController]];
+}
 
 - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions
 {
@@ -81,6 +92,13 @@ static const int ddLogLevel = LOG_LEVEL_INFO;
 			[self addMessageFromRemoteNotification:dictionary updateUI:NO];
 		}
 	}
+    
+    /*
+    MFSideMenuContainerViewController *container = [MFSideMenuContainerViewController
+                                                    containerWithCenterViewController:[self navigationController]
+                                                    leftMenuViewController:leftMenuViewController
+                                                    rightMenuViewController:rightMenuViewController];
+    */
     
     [self setupRoster];
 
@@ -315,10 +333,11 @@ static const int ddLogLevel = LOG_LEVEL_INFO;
     return YES;
 }
 
--(void)disconnect
+-(BOOL)disconnect
 {
     [self goOffline];
     [xmppStream disconnect];
+    return TRUE;
 }
 
 -(void)setupStream
@@ -328,6 +347,8 @@ static const int ddLogLevel = LOG_LEVEL_INFO;
     [xmppStream setHostName:kHostName];
     [xmppStream setHostPort:5222];
     allowSelfSignedCertificates = YES;
+    
+    [xmppRoster activate:xmppStream];
 }
 
 -(void)setupRoster
@@ -335,6 +356,11 @@ static const int ddLogLevel = LOG_LEVEL_INFO;
     xmppRosterStorage = [[XMPPRosterCoreDataStorage alloc] init];
     xmppRoster = [[XMPPRoster alloc] initWithRosterStorage:xmppRosterStorage
                                              dispatchQueue:dispatch_get_main_queue()];
+    if(xmppRoster)
+    {
+        NSLog(@"init check:");
+    }
+    
     [xmppRoster addDelegate:self delegateQueue:dispatch_get_main_queue()];
 }
 
@@ -376,8 +402,11 @@ static const int ddLogLevel = LOG_LEVEL_INFO;
 
 -(void)goOffline
 {
-    XMPPPresence *presence = [XMPPPresence presenceWithType:@"unavailable"];
-    [[self xmppStream]sendElement:presence];
+    XMPPPresence *presence = [XMPPPresence presence];
+    NSXMLElement *status = [NSXMLElement elementWithName:@"status"];
+    [status setStringValue:@"unavailable"];
+    [presence addChild:status];
+    [xmppStream sendElement:presence];
 }
 
 
@@ -424,7 +453,7 @@ static const int ddLogLevel = LOG_LEVEL_INFO;
 
 - (BOOL)xmppStream:(XMPPStream *)sender didReceiveIQ:(XMPPIQ *)iq
 {
-    NSLog(@"iq has connections");
+    //NSLog(@"iq has connections: %@",iq);
 
     NSXMLElement *rosterQuery=[iq elementForName:@"query" xmlns:@"jabber:iq:roster"];
     if(rosterQuery)
@@ -474,11 +503,7 @@ static const int ddLogLevel = LOG_LEVEL_INFO;
             }
         }
         NSString *fromClipped=[from substringToIndex:indexPos];
-        NSString *alertTitle=[[NSString alloc]initWithString:@"New message from "];
-        alertTitle=[alertTitle stringByAppendingString:fromClipped];
-        UIAlertView *newChatMessage=[[UIAlertView alloc]initWithTitle:alertTitle message:msg delegate:self cancelButtonTitle:@"Cancel" otherButtonTitles:@"Show", nil];
-        [newChatMessage show];
-        [newChatMessage release];
+        [mainViewObj invokeChatView:fromClipped :msg];
     }
 }
 
@@ -528,8 +553,7 @@ static const int ddLogLevel = LOG_LEVEL_INFO;
                 NSString *alertMessage=[[NSString alloc]initWithString:@"New buddy request from "];
                 alertMessage=[alertMessage stringByAppendingString:presenceFromUser];
                 UIAlertView *buddyRequestAlert=[[UIAlertView alloc]initWithTitle:@"New Buddy Request!" message:alertMessage delegate:self cancelButtonTitle:@"Reject" otherButtonTitles:@"Accept", nil];
-                NSLog(@"test1: %@",presenceFromUser);
-                [self acceptRequest:0];
+                [self fetchCurrentJID:0];
         
                 [buddyRequestAlert show];
                 [buddyRequestAlert release];
@@ -557,9 +581,17 @@ static const int ddLogLevel = LOG_LEVEL_INFO;
             NSLog(@"subscription request rejected");
         }
 	}
+    else
+    {
+        if ([presenceType isEqualToString:@"unavailable"])
+        {
+            NSLog(@"%@ goes offline",presenceFromUser);
+            [friendViewObj setAllOffline];
+        }
+    }
 }
 
--(NSString *)acceptRequest: (int)check
+-(NSString *)fetchCurrentJID: (int)check
 {
     if(check==0)
     {
@@ -579,6 +611,10 @@ static const int ddLogLevel = LOG_LEVEL_INFO;
 
 -(void)invokeAcceptance: (NSString *)budJID
 {
+    [xmppRoster acceptPresenceSubscriptionRequestFrom:[XMPPJID jidWithString:budJID] andAddToRoster:YES];
+    NSLog(@"subscribing to %@",[[XMPPJID jidWithString:budJID]bareJID]);
+
+    /*
     XMPPPresence *presence = [XMPPPresence presenceWithType:@"subscribed" to:[[XMPPJID jidWithString:budJID] bareJID]];
 	[xmppStream sendElement:presence];
     NSString *jidDesc=[[NSString alloc]initWithString:myUsername];
@@ -586,23 +622,20 @@ static const int ddLogLevel = LOG_LEVEL_INFO;
     jidDesc=[jidDesc stringByAppendingString:kHostName];
     
     NSLog(@"my jid right now: %@",jidDesc);
-    NSLog(@"subscribing to %@",[[XMPPJID jidWithString:budJID]bareJID]);
+    */
+    
     
     /*Reversing request*/
-    [xmppStream setMyJID:[[XMPPJID jidWithString:budJID] bareJID]];
-    XMPPPresence *myPresence = [XMPPPresence presenceWithType:@"subscribed" to:[[XMPPJID jidWithString:jidDesc]bareJID]];
-	[xmppStream sendElement:myPresence];
+    //[xmppRoster addUser:[[XMPPJID jidWithString:budJID]bareJID] withNickname:[[XMPPJID jidWithString:budJID]bareJID].description];
     
-    NSLog(@"my jid right reversed: %@",[xmppStream myJID]);
-    NSLog(@"reverse subscribing to %@",[[XMPPJID jidWithString:jidDesc]bareJID]);
-    
-    /*Set back original JID*/
-    [xmppStream setMyJID:[XMPPJID jidWithString:jidDesc]];
+    //[xmppRoster subscribePresenceToUser:[XMPPJID jidWithString:budJID]];
 }
 
 
 -(void)invokeRejection: (NSString *)budJID
 {
+    [xmppRoster rejectPresenceSubscriptionRequestFrom:[XMPPJID jidWithString:budJID]];
+    /*
     XMPPPresence *presence = [XMPPPresence presenceWithType:@"unsubscribed" to:[[XMPPJID jidWithString:budJID] bareJID]];
 	[xmppStream sendElement:presence];
     NSString *jidDesc=[[NSString alloc]initWithString:myUsername];
@@ -610,45 +643,42 @@ static const int ddLogLevel = LOG_LEVEL_INFO;
     jidDesc=[jidDesc stringByAppendingString:kHostName];
     
     NSLog(@"my jid right now: %@",jidDesc);
+    */
     NSLog(@"unsubscribing from %@",[[XMPPJID jidWithString:budJID]bareJID]);
 }
 
 
-- (void)alertView:(UIAlertView *)alertView didDismissWithButtonIndex:(NSInteger)buttonIndex
+- (void)alertView:(UIAlertView *)alertViewOld didDismissWithButtonIndex:(NSInteger)buttonIndex
 {
-    if([alertView.title isEqualToString:@"New buddy request from "])
-    {
-        NSString *presenceOfBuddy;
-        presenceOfBuddy=[self acceptRequest:1];
+    NSLog(@"inside acceptance..");
+    NSString *presenceOfBuddy;
+    presenceOfBuddy=[self fetchCurrentJID:1];
         
-        if(buttonIndex==1)
+    if(buttonIndex==1)
+    {
+        if([alertViewOld.title isEqualToString:@"New Buddy Request!"])
         {
+            NSLog(@"acceptance invoked!");
             NSString *buddyJID=[[NSString alloc]initWithString:presenceOfBuddy];
             buddyJID=[buddyJID stringByAppendingString:@"@"];
             buddyJID=[buddyJID stringByAppendingString:kHostName];
             [self invokeAcceptance:buddyJID];
-            
+                
             //[friendViewObj setOnline:[NSString stringWithFormat:@"%@", presenceOfBuddy]];
             //[_chatDelegate newBuddyOnline:[NSString stringWithFormat:@"%@", presenceOfBuddy]];
             newPresence=1;  //Request Accepted
         }
-        else if (buttonIndex==0)
-        {
-            newPresence=0;   //Request Rejected
             
-            NSString *buddyJID=[[NSString alloc]initWithString:presenceOfBuddy];
-            buddyJID=[buddyJID stringByAppendingString:@"@"];
-            buddyJID=[buddyJID stringByAppendingString:kHostName];
-            [self invokeRejection:buddyJID];
-            NSLog(@"buddy request rejected");
-        }
     }
-    else if([alertView.title hasPrefix:@"New message from "])
+    else if (buttonIndex==0)
     {
-        if(buttonIndex==1)
-        {
-            [mainViewObj invokeChatView];
-        }
+        newPresence=0;   //Request Rejected
+            
+        NSString *buddyJID=[[NSString alloc]initWithString:presenceOfBuddy];
+        buddyJID=[buddyJID stringByAppendingString:@"@"];
+        buddyJID=[buddyJID stringByAppendingString:kHostName];
+        [self invokeRejection:buddyJID];
+        NSLog(@"buddy request rejected");
     }
 }
 

@@ -195,7 +195,7 @@ static int viewIsActive=0;
                 backButton.enabled=TRUE;
                 sendButton.enabled=TRUE;
                 
-                UIAlertView *connNullAlert=[[UIAlertView alloc]initWithTitle:@"Connection Error" message:@"Unable to contact server" delegate:nil cancelButtonTitle:@"Ok" otherButtonTitles:nil, nil];
+                UIAlertView *connNullAlert=[[UIAlertView alloc]initWithTitle:@"Connection Error" message:@"Unable to contact server. Please try again." delegate:nil cancelButtonTitle:@"Ok" otherButtonTitles:nil, nil];
                 [connNullAlert show];
                 [connNullAlert release];
             }
@@ -268,6 +268,7 @@ static int viewIsActive=0;
 -(IBAction)backToFriendsView
 {
     [self dismissViewControllerAnimated:YES completion:nil];
+    [self removeFromParentViewController];
 }
 
 -(void)getUserId:(NSString *)userId

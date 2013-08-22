@@ -2,60 +2,50 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+    <key>StringsTable</key>
+	<string>Root</string>
 	<key>PreferenceSpecifiers</key>
 	<array>
 		<dict>
 			<key>Title</key>
-			<string>Group</string>
-			<key>Type</key>
+			<string>Version Info</string>
+            <key>Type</key>
+			<string>PSGroupSpecifier</string>
+		</dict>
+        <dict>
+            <key>DefaultValue</key>
+            <string>1.0</string>
+            <key>Key</key>
+            <string>version_info</string>
+            <key>Title</key>
+            <string>Version</string>
+            <key>Type</key>
+            <string>PSTitleValueSpecifier</string>
+        </dict>
+        <dict>
+			<key>Title</key>
+			<string>Developer Info</string>
+            <key>Type</key>
 			<string>PSGroupSpecifier</string>
 		</dict>
 		<dict>
-			<key>AutocapitalizationType</key>
-			<string>None</string>
-			<key>AutocorrectionType</key>
-			<string>No</string>
-			<key>DefaultValue</key>
-			<string>https://appserver.utdallas.edu:8443/REST</string>
-			<key>IsSecure</key>
-			<false/>
-			<key>Key</key>
-			<string>server_url</string>
-			<key>KeyboardType</key>
-			<string>Alphabet</string>
-			<key>Title</key>
-			<string>URL</string>
-			<key>Type</key>
-			<string>PSTextFieldSpecifier</string>
-		</dict>
-		<dict>
-			<key>DefaultValue</key>
-			<true/>
-			<key>Key</key>
-			<string>enabled_preference</string>
-			<key>Title</key>
-			<string>Enabled</string>
-			<key>Type</key>
-			<string>PSToggleSwitchSpecifier</string>
-		</dict>
-		<dict>
-			<key>DefaultValue</key>
-			<real>0.5</real>
-			<key>Key</key>
-			<string>slider_preference</string>
-			<key>MaximumValue</key>
-			<integer>1</integer>
-			<key>MaximumValueImage</key>
-			<string></string>
-			<key>MinimumValue</key>
-			<integer>0</integer>
-			<key>MinimumValueImage</key>
-			<string></string>
-			<key>Type</key>
-			<string>PSSliderSpecifier</string>
-		</dict>
+            <key>DefaultValue</key>
+            <string>Ankit Malhotra</string>
+            <key>Key</key>
+            <string>developer_info</string>
+            <key>Title</key>
+            <string>Developed by</string>
+            <key>Type</key>
+            <string>PSTitleValueSpecifier</string>
+        </dict>
+        <dict>
+            <key>Title</key>
+            <string>About</string>
+            <key>Type</key>
+            <string>PSGroupSpecifier</string>
+            <key>FooterText</key>
+            <string>Copyright © 2013 by SecureTalk. All rights reserved.</string>
+        </dict>
 	</array>
-	<key>StringsTable</key>
-	<string>Root</string>
 </dict>
 </plist>

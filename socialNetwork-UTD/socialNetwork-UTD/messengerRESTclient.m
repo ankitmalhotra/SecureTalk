@@ -7,51 +7,42 @@
 //
 
 #import "messengerRESTclient.h"
+#import "groupsTableViewViewController.h"
 
 static int valueToReturn=0;
+
+@interface messengerRESTclient()
+{
+    int endpointSignal;
+    groupsTableViewViewController *groupsTbVwObj;
+}
+
+/*Local method that stores the Server's Base URL. Returns server URL as String*/
+-(NSString *)getServerURL;
+
+@end
+
 
 
 @implementation messengerRESTclient
 
+/*Get Server's URL stored on stack locally. Returns server URL as String*/
+-(NSString *)getServerURL
+{
+    NSString *baseURL=@"https://appserver.utdallas.edu:443/REST";
+    return baseURL;
+}
+
+
+
+/*POST request calls for all endpoints below*/
 
 -(void)showMyGroups:(NSString *)userNumber :(double)locationLat :(double)locationLong :(NSString *)accessToken :(NSString *)endPointURL
 {
     serviceEndPoint=endPointURL;
     
-    NSString *settingsBundle=[[NSBundle mainBundle]pathForResource:@"Settings" ofType:@"bundle"];
-    if(!settingsBundle)
-    {
-        NSLog(@"settings found");
-    }
-    else
-    {
-        NSLog(@"settings missing..");
-    }
-    
-    NSDictionary *settings=[NSDictionary dictionaryWithContentsOfFile:[settingsBundle stringByAppendingPathComponent:@"Root.plist"]];
-    NSArray *prefrences=[settings objectForKey:@"PreferenceSpecifiers"];
-    
-    NSMutableDictionary *defaultsToRegister=[[NSMutableDictionary alloc]initWithCapacity:[prefrences count]];
-    
-    for(NSDictionary *prefSpecs in prefrences)
-    {
-        NSString *key=[prefSpecs objectForKey:@"Key"];
-        if(key)
-        {
-            [defaultsToRegister setObject:[prefSpecs objectForKey:@"DefaultValue"] forKey:key];
-        }
-        else
-        {
-            NSLog(@"key not found..");
-        }
-    }
-    
-    [[NSUserDefaults standardUserDefaults]registerDefaults:defaultsToRegister];
-    [defaultsToRegister release];
-    
-    NSUserDefaults *defaults=[NSUserDefaults standardUserDefaults];
-    NSString *urlString=[defaults stringForKey:@"server_url"];
-    //NSURL *url=[NSURL URLWithString:[NSString stringWithFormat:@"%@",urlString]];
+    /*Call to fetch server URL*/
+    NSString *urlString=[self getServerURL];
     
     NSURL *url=[[messengerAppDelegate sharedAppDelegate]smartURLForString:[NSString stringWithFormat:@"%@/v1/%@",urlString,endPointURL]];
     
@@ -87,39 +78,8 @@ static int valueToReturn=0;
 {
     serviceEndPoint=endPointURL;
     
-    NSString *settingsBundle=[[NSBundle mainBundle]pathForResource:@"Settings" ofType:@"bundle"];
-    if(!settingsBundle)
-    {
-        NSLog(@"settings found");
-    }
-    else
-    {
-        NSLog(@"settings missing..");
-    }
-    
-    NSDictionary *settings=[NSDictionary dictionaryWithContentsOfFile:[settingsBundle stringByAppendingPathComponent:@"Root.plist"]];
-    NSArray *prefrences=[settings objectForKey:@"PreferenceSpecifiers"];
-    
-    NSMutableDictionary *defaultsToRegister=[[NSMutableDictionary alloc]initWithCapacity:[prefrences count]];
-    
-    for(NSDictionary *prefSpecs in prefrences)
-    {
-        NSString *key=[prefSpecs objectForKey:@"Key"];
-        if(key)
-        {
-            [defaultsToRegister setObject:[prefSpecs objectForKey:@"DefaultValue"] forKey:key];
-        }
-        else
-        {
-            NSLog(@"key not found..");
-        }
-    }
-    
-    [[NSUserDefaults standardUserDefaults]registerDefaults:defaultsToRegister];
-    [defaultsToRegister release];
-    
-    NSUserDefaults *defaults=[NSUserDefaults standardUserDefaults];
-    NSString *urlString=[defaults stringForKey:@"server_url"];
+    /*Call to fetch server URL*/
+    NSString *urlString=[self getServerURL];
     
     NSURL *url=[[messengerAppDelegate sharedAppDelegate]smartURLForString:[NSString stringWithFormat:@"%@/v1/%@",urlString,endPointURL]];
     
@@ -157,39 +117,8 @@ static int valueToReturn=0;
 
     serviceEndPoint=endPointURL;
     
-    NSString *settingsBundle=[[NSBundle mainBundle]pathForResource:@"Settings" ofType:@"bundle"];
-    if(!settingsBundle)
-    {
-        NSLog(@"settings found");
-    }
-    else
-    {
-        NSLog(@"settings missing..");
-    }
-    
-    NSDictionary *settings=[NSDictionary dictionaryWithContentsOfFile:[settingsBundle stringByAppendingPathComponent:@"Root.plist"]];
-    NSArray *prefrences=[settings objectForKey:@"PreferenceSpecifiers"];
-    
-    NSMutableDictionary *defaultsToRegister=[[NSMutableDictionary alloc]initWithCapacity:[prefrences count]];
-    
-    for(NSDictionary *prefSpecs in prefrences)
-    {
-        NSString *key=[prefSpecs objectForKey:@"Key"];
-        if(key)
-        {
-            [defaultsToRegister setObject:[prefSpecs objectForKey:@"DefaultValue"] forKey:key];
-        }
-        else
-        {
-            NSLog(@"key not found..");
-        }
-    }
-    
-    [[NSUserDefaults standardUserDefaults]registerDefaults:defaultsToRegister];
-    [defaultsToRegister release];
-    
-    NSUserDefaults *defaults=[NSUserDefaults standardUserDefaults];
-    NSString *urlString=[defaults stringForKey:@"server_url"];
+    /*Call to fetch server URL*/
+    NSString *urlString=[self getServerURL];
     
     NSURL *url=[[messengerAppDelegate sharedAppDelegate]smartURLForString:[NSString stringWithFormat:@"%@/v1/%@",urlString,endPointURL]];
     
@@ -222,43 +151,48 @@ static int valueToReturn=0;
     [NSURLConnection connectionWithRequest:request delegate:self];
 }
 
+
+-(void)unjoinGroups:(NSString *)userNumber :(NSString *)groupNumber :(NSString *)accessToken :(NSString *)endPointURL
+{    
+    serviceEndPoint=endPointURL;
+    
+    /*Call to fetch server URL*/
+    NSString *urlString=[self getServerURL];
+    
+    NSURL *url=[[messengerAppDelegate sharedAppDelegate]smartURLForString:[NSString stringWithFormat:@"%@/v1/%@",urlString,endPointURL]];
+    
+    NSLog(@"Sending Request to URL %@", url);
+    
+    [UIApplication sharedApplication].networkActivityIndicatorVisible=YES;
+    
+    NSMutableURLRequest *request=[NSMutableURLRequest requestWithURL:url cachePolicy:NSURLRequestReloadIgnoringCacheData timeoutInterval:10.0];
+    [request setHTTPMethod:@"POST"];
+    NSString *contentType=[NSString stringWithFormat:@"application/XML"];
+    [request addValue:contentType forHTTPHeaderField:@"Content-type"];
+    
+    /*Build the XML structure to send*/
+    if([endPointURL isEqualToString:@"leaveGroup"])
+    {
+        NSMutableData *postData=[NSMutableData data];
+        [postData appendData:[[NSString stringWithFormat:@"<JoinGroup xmlns=\"http://appserver.utdallas.edu/schema\">"]dataUsingEncoding:NSUTF8StringEncoding]];
+        [postData appendData:[[NSString stringWithFormat:@"<UserNumber>%@</UserNumber>",userNumber]dataUsingEncoding:NSUTF8StringEncoding]];
+        [postData appendData:[[NSString stringWithFormat:@"<GroupNumber>%@</GroupNumber>",groupNumber]dataUsingEncoding:NSUTF8StringEncoding]];
+        [postData appendData:[[NSString stringWithFormat:@"<AccessToken>%@</AccessToken>",accessToken]dataUsingEncoding:NSUTF8StringEncoding]];
+        [postData appendData:[[NSString stringWithFormat:@"</JoinGroup>"]dataUsingEncoding:NSUTF8StringEncoding]];
+        [request setHTTPBody:postData];
+        NSLog(@"passing xml: %@",postData);
+    }
+    
+    /*Asynchronous call to server initiated. Delegates will be called in order now*/
+    [NSURLConnection connectionWithRequest:request delegate:self];
+}
+
 -(void)chatMessage:(NSString *)senderNumber :(NSString *)receiverNumber :(NSString *)chatMessageData :(NSString *)endPointURL
 {
     serviceEndPoint=endPointURL;
     
-    NSString *settingsBundle=[[NSBundle mainBundle]pathForResource:@"Settings" ofType:@"bundle"];
-    if(!settingsBundle)
-    {
-        NSLog(@"settings found");
-    }
-    else
-    {
-        NSLog(@"settings missing..");
-    }
-    
-    NSDictionary *settings=[NSDictionary dictionaryWithContentsOfFile:[settingsBundle stringByAppendingPathComponent:@"Root.plist"]];
-    NSArray *prefrences=[settings objectForKey:@"PreferenceSpecifiers"];
-    
-    NSMutableDictionary *defaultsToRegister=[[NSMutableDictionary alloc]initWithCapacity:[prefrences count]];
-    
-    for(NSDictionary *prefSpecs in prefrences)
-    {
-        NSString *key=[prefSpecs objectForKey:@"Key"];
-        if(key)
-        {
-            [defaultsToRegister setObject:[prefSpecs objectForKey:@"DefaultValue"] forKey:key];
-        }
-        else
-        {
-            NSLog(@"key not found..");
-        }
-    }
-    
-    [[NSUserDefaults standardUserDefaults]registerDefaults:defaultsToRegister];
-    [defaultsToRegister release];
-    
-    NSUserDefaults *defaults=[NSUserDefaults standardUserDefaults];
-    NSString *urlString=[defaults stringForKey:@"server_url"];
+    /*Call to fetch server URL*/
+    NSString *urlString=[self getServerURL];
     
     NSURL *url=[[messengerAppDelegate sharedAppDelegate]smartURLForString:[NSString stringWithFormat:@"%@/v1/%@",urlString,endPointURL]];
     
@@ -292,39 +226,8 @@ static int valueToReturn=0;
 {
     serviceEndPoint=endPointURL;
     
-    NSString *settingsBundle=[[NSBundle mainBundle]pathForResource:@"Settings" ofType:@"bundle"];
-    if(!settingsBundle)
-    {
-        NSLog(@"settings found");
-    }
-    else
-    {
-        NSLog(@"settings missing..");
-    }
-    
-    NSDictionary *settings=[NSDictionary dictionaryWithContentsOfFile:[settingsBundle stringByAppendingPathComponent:@"Root.plist"]];
-    NSArray *prefrences=[settings objectForKey:@"PreferenceSpecifiers"];
-    
-    NSMutableDictionary *defaultsToRegister=[[NSMutableDictionary alloc]initWithCapacity:[prefrences count]];
-    
-    for(NSDictionary *prefSpecs in prefrences)
-    {
-        NSString *key=[prefSpecs objectForKey:@"Key"];
-        if(key)
-        {
-            [defaultsToRegister setObject:[prefSpecs objectForKey:@"DefaultValue"] forKey:key];
-        }
-        else
-        {
-            NSLog(@"key not found..");
-        }
-    }
-    
-    [[NSUserDefaults standardUserDefaults]registerDefaults:defaultsToRegister];
-    [defaultsToRegister release];
-    
-    NSUserDefaults *defaults=[NSUserDefaults standardUserDefaults];
-    NSString *urlString=[defaults stringForKey:@"server_url"];
+    /*Call to fetch server URL*/
+    NSString *urlString=[self getServerURL];
     
     NSURL *url=[[messengerAppDelegate sharedAppDelegate]smartURLForString:[NSString stringWithFormat:@"%@/v1/%@",urlString,endPointURL]];
     
@@ -361,39 +264,8 @@ static int valueToReturn=0;
 {
     serviceEndPoint=endPointURL;
     
-    NSString *settingsBundle=[[NSBundle mainBundle]pathForResource:@"Settings" ofType:@"bundle"];
-    if(!settingsBundle)
-    {
-        NSLog(@"settings found");
-    }
-    else
-    {
-        NSLog(@"settings missing..");
-    }
-    
-    NSDictionary *settings=[NSDictionary dictionaryWithContentsOfFile:[settingsBundle stringByAppendingPathComponent:@"Root.plist"]];
-    NSArray *prefrences=[settings objectForKey:@"PreferenceSpecifiers"];
-    
-    NSMutableDictionary *defaultsToRegister=[[NSMutableDictionary alloc]initWithCapacity:[prefrences count]];
-    
-    for(NSDictionary *prefSpecs in prefrences)
-    {
-        NSString *key=[prefSpecs objectForKey:@"Key"];
-        if(key)
-        {
-            [defaultsToRegister setObject:[prefSpecs objectForKey:@"DefaultValue"] forKey:key];
-        }
-        else
-        {
-            NSLog(@"key not found..");
-        }
-    }
-    
-    [[NSUserDefaults standardUserDefaults]registerDefaults:defaultsToRegister];
-    [defaultsToRegister release];
-    
-    NSUserDefaults *defaults=[NSUserDefaults standardUserDefaults];
-    NSString *urlString=[defaults stringForKey:@"server_url"];
+    /*Call to fetch server URL*/
+    NSString *urlString=[self getServerURL];
     
     NSURL *url=[[messengerAppDelegate sharedAppDelegate]smartURLForString:[NSString stringWithFormat:@"%@/v1/%@",urlString,endPointURL]];
     
@@ -431,39 +303,8 @@ static int valueToReturn=0;
 {
     serviceEndPoint=endPointURL;
     
-    NSString *settingsBundle=[[NSBundle mainBundle]pathForResource:@"Settings" ofType:@"bundle"];
-    if(!settingsBundle)
-    {
-        NSLog(@"settings found");
-    }
-    else
-    {
-        NSLog(@"settings missing..");
-    }
-    
-    NSDictionary *settings=[NSDictionary dictionaryWithContentsOfFile:[settingsBundle stringByAppendingPathComponent:@"Root.plist"]];
-    NSArray *prefrences=[settings objectForKey:@"PreferenceSpecifiers"];
-    
-    NSMutableDictionary *defaultsToRegister=[[NSMutableDictionary alloc]initWithCapacity:[prefrences count]];
-    
-    for(NSDictionary *prefSpecs in prefrences)
-    {
-        NSString *key=[prefSpecs objectForKey:@"Key"];
-        if(key)
-        {
-            [defaultsToRegister setObject:[prefSpecs objectForKey:@"DefaultValue"] forKey:key];
-        }
-        else
-        {
-            NSLog(@"key not found..");
-        }
-    }
-    
-    [[NSUserDefaults standardUserDefaults]registerDefaults:defaultsToRegister];
-    [defaultsToRegister release];
-    
-    NSUserDefaults *defaults=[NSUserDefaults standardUserDefaults];
-    NSString *urlString=[defaults stringForKey:@"server_url"];
+    /*Call to fetch server URL*/
+    NSString *urlString=[self getServerURL];
     
     NSURL *url=[[messengerAppDelegate sharedAppDelegate]smartURLForString:[NSString stringWithFormat:@"%@/v1/%@",urlString,endPointURL]];
     
@@ -511,39 +352,8 @@ static int valueToReturn=0;
 {
     serviceEndPoint=endPointURL;
     
-    NSString *settingsBundle=[[NSBundle mainBundle]pathForResource:@"Settings" ofType:@"bundle"];
-    if(!settingsBundle)
-    {
-        NSLog(@"settings found");
-    }
-    else
-    {
-        NSLog(@"settings missing..");
-    }
-    
-    NSDictionary *settings=[NSDictionary dictionaryWithContentsOfFile:[settingsBundle stringByAppendingPathComponent:@"Root.plist"]];
-    NSArray *prefrences=[settings objectForKey:@"PreferenceSpecifiers"];
-    
-    NSMutableDictionary *defaultsToRegister=[[NSMutableDictionary alloc]initWithCapacity:[prefrences count]];
-    
-    for(NSDictionary *prefSpecs in prefrences)
-    {
-        NSString *key=[prefSpecs objectForKey:@"Key"];
-        if(key)
-        {
-            [defaultsToRegister setObject:[prefSpecs objectForKey:@"DefaultValue"] forKey:key];
-        }
-        else
-        {
-            NSLog(@"key not found..");
-        }
-    }
-    
-    [[NSUserDefaults standardUserDefaults]registerDefaults:defaultsToRegister];
-    [defaultsToRegister release];
-    
-    NSUserDefaults *defaults=[NSUserDefaults standardUserDefaults];
-    NSString *urlString=[defaults stringForKey:@"server_url"];
+    /*Call to fetch server URL*/
+    NSString *urlString=[self getServerURL];
     
     NSURL *url=[[messengerAppDelegate sharedAppDelegate]smartURLForString:[NSString stringWithFormat:@"%@/v1/%@",urlString,endPointURL]];
     
@@ -582,40 +392,8 @@ static int valueToReturn=0;
     
     serviceEndPoint=endPointURL;
     
-    NSString *settingsBundle=[[NSBundle mainBundle]pathForResource:@"Settings" ofType:@"bundle"];
-    if(!settingsBundle)
-    {
-        NSLog(@"settings found");
-    }
-    else
-    {
-        NSLog(@"settings missing..");
-    }
-    
-    NSDictionary *settings=[NSDictionary dictionaryWithContentsOfFile:[settingsBundle stringByAppendingPathComponent:@"Root.plist"]];
-    NSArray *prefrences=[settings objectForKey:@"PreferenceSpecifiers"];
-    
-    NSMutableDictionary *defaultsToRegister=[[NSMutableDictionary alloc]initWithCapacity:[prefrences count]];
-    
-    for(NSDictionary *prefSpecs in prefrences)
-    {
-        NSString *key=[prefSpecs objectForKey:@"Key"];
-        if(key)
-        {
-            [defaultsToRegister setObject:[prefSpecs objectForKey:@"DefaultValue"] forKey:key];
-        }
-        else
-        {
-            NSLog(@"key not found..");
-        }
-    }
-    
-    [[NSUserDefaults standardUserDefaults]registerDefaults:defaultsToRegister];
-    [defaultsToRegister release];
-    
-    NSUserDefaults *defaults=[NSUserDefaults standardUserDefaults];
-    NSString *urlString=[defaults stringForKey:@"server_url"];
-    //NSURL *url=[NSURL URLWithString:[NSString stringWithFormat:@"%@",urlString]];
+    /*Call to fetch server URL*/
+    NSString *urlString=[self getServerURL];
     
     NSURL *url=[[messengerAppDelegate sharedAppDelegate]smartURLForString:[NSString stringWithFormat:@"%@/v1/%@",urlString,endPointURL]];
     
@@ -653,40 +431,8 @@ static int valueToReturn=0;
     
     serviceEndPoint=endPointURL;
     
-    NSString *settingsBundle=[[NSBundle mainBundle]pathForResource:@"Settings" ofType:@"bundle"];
-    if(!settingsBundle)
-    {
-        NSLog(@"settings found");
-    }
-    else
-    {
-        NSLog(@"settings missing..");
-    }
-    
-    NSDictionary *settings=[NSDictionary dictionaryWithContentsOfFile:[settingsBundle stringByAppendingPathComponent:@"Root.plist"]];
-    NSArray *prefrences=[settings objectForKey:@"PreferenceSpecifiers"];
-    
-    NSMutableDictionary *defaultsToRegister=[[NSMutableDictionary alloc]initWithCapacity:[prefrences count]];
-    
-    for(NSDictionary *prefSpecs in prefrences)
-    {
-        NSString *key=[prefSpecs objectForKey:@"Key"];
-        if(key)
-        {
-            [defaultsToRegister setObject:[prefSpecs objectForKey:@"DefaultValue"] forKey:key];
-        }
-        else
-        {
-            NSLog(@"key not found..");
-        }
-    }
-    
-    [[NSUserDefaults standardUserDefaults]registerDefaults:defaultsToRegister];
-    [defaultsToRegister release];
-    
-    NSUserDefaults *defaults=[NSUserDefaults standardUserDefaults];
-    NSString *urlString=[defaults stringForKey:@"server_url"];
-    //NSURL *url=[NSURL URLWithString:[NSString stringWithFormat:@"%@",urlString]];
+    /*Call to fetch server URL*/
+    NSString *urlString=[self getServerURL];
     
     NSURL *url=[[messengerAppDelegate sharedAppDelegate]smartURLForString:[NSString stringWithFormat:@"%@/v1/%@",urlString,endPointURL]];
     
@@ -715,43 +461,216 @@ static int valueToReturn=0;
 }
 
 
+-(void)changeUserPassword :(NSString *)userNumber :(NSString *)userPassword :(NSString *)newPassword :(NSString *)accessToken :(NSString *)endPointURL
+{
+    serviceEndPoint=endPointURL;
+    
+    /*Call to fetch server URL*/
+    NSString *urlString=[self getServerURL];
+    
+    NSURL *url=[[messengerAppDelegate sharedAppDelegate]smartURLForString:[NSString stringWithFormat:@"%@/v1/%@",urlString,endPointURL]];
+    
+    NSLog(@"Sending Request to URL %@", url);
+    
+    [UIApplication sharedApplication].networkActivityIndicatorVisible=YES;
+    
+    NSMutableURLRequest *request=[NSMutableURLRequest requestWithURL:url cachePolicy:NSURLRequestReloadIgnoringCacheData timeoutInterval:10.0];
+    [request setHTTPMethod:@"POST"];
+    NSString *contentType=[NSString stringWithFormat:@"application/XML"];
+    [request addValue:contentType forHTTPHeaderField:@"Content-type"];
+    
+    if([endPointURL isEqualToString:@"changeUserInfo"])
+    {
+        NSLog(@"change of password init..");
+        NSLog(@"user number %@", userNumber);
+        NSLog(@"new password %@", [newPassword retain]);
+        NSLog(@"access token %@", accessToken);
+        NSLog(@"old password %@", [userPassword retain]);
+       
+        
+        
+        NSMutableData *postData=[NSMutableData data];
+        [postData appendData:[[NSString stringWithFormat:@"<user xmlns=\"http://appserver.utdallas.edu/schema\">"]dataUsingEncoding:NSUTF8StringEncoding]];
+        [postData appendData:[[NSString stringWithFormat:@"<UserNumber>%@</UserNumber>",userNumber]dataUsingEncoding:NSUTF8StringEncoding]];
+        [postData appendData:[[NSString stringWithFormat:@"<UserPassword>%@</UserPassword>",[userPassword retain]]dataUsingEncoding:NSUTF8StringEncoding]];
+        [postData appendData:[[NSString stringWithFormat:@"<NewUserPassword>%@</NewUserPassword>",[newPassword retain]]dataUsingEncoding:NSUTF8StringEncoding]];
+        [postData appendData:[[NSString stringWithFormat:@"<AccessToken>%@</AccessToken>",accessToken]dataUsingEncoding:NSUTF8StringEncoding]];
+        [postData appendData:[[NSString stringWithFormat:@"</user>"]dataUsingEncoding:NSUTF8StringEncoding]];
+        [request setHTTPBody:postData];
+    }
+    
+    /*Asynchronous call to server initiated. Delegates will be called in order now*/
+    [NSURLConnection connectionWithRequest:request delegate:self];
+}
+
+
+-(void)changeUserEmailAddress:(NSString *)userNumber :(NSString *)userPassword :(NSString *)emailAddress :(NSString *)accessToken :(NSString *)endPointURL
+{
+    serviceEndPoint=endPointURL;
+    
+    /*Call to fetch server URL*/
+    NSString *urlString=[self getServerURL];
+    
+    NSURL *url=[[messengerAppDelegate sharedAppDelegate]smartURLForString:[NSString stringWithFormat:@"%@/v1/%@",urlString,endPointURL]];
+    
+    NSLog(@"Sending Request to URL %@", url);
+    
+    [UIApplication sharedApplication].networkActivityIndicatorVisible=YES;
+    
+    NSMutableURLRequest *request=[NSMutableURLRequest requestWithURL:url cachePolicy:NSURLRequestReloadIgnoringCacheData timeoutInterval:10.0];
+    [request setHTTPMethod:@"POST"];
+    NSString *contentType=[NSString stringWithFormat:@"application/XML"];
+    [request addValue:contentType forHTTPHeaderField:@"Content-type"];
+    
+    if([endPointURL isEqualToString:@"changeUserInfo"])
+    {
+        NSLog(@"change of email address init..");
+        NSLog(@"user number %@", userNumber);
+        NSLog(@"user password %@", [userPassword retain]);
+        NSLog(@"new email address %@", [emailAddress retain]);
+        NSLog(@"access token %@", accessToken);
+        
+        
+        NSMutableData *postData=[NSMutableData data];
+        [postData appendData:[[NSString stringWithFormat:@"<user xmlns=\"http://appserver.utdallas.edu/schema\">"]dataUsingEncoding:NSUTF8StringEncoding]];
+        [postData appendData:[[NSString stringWithFormat:@"<UserNumber>%@</UserNumber>",userNumber]dataUsingEncoding:NSUTF8StringEncoding]];
+        [postData appendData:[[NSString stringWithFormat:@"<UserPassword>%@</UserPassword>",[userPassword retain]]dataUsingEncoding:NSUTF8StringEncoding]];
+        [postData appendData:[[NSString stringWithFormat:@"<EmailAddress>%@</EmailAddress>",[emailAddress retain]]dataUsingEncoding:NSUTF8StringEncoding]];
+        [postData appendData:[[NSString stringWithFormat:@"<AccessToken>%@</AccessToken>",accessToken]dataUsingEncoding:NSUTF8StringEncoding]];
+        [postData appendData:[[NSString stringWithFormat:@"</user>"]dataUsingEncoding:NSUTF8StringEncoding]];
+        [request setHTTPBody:postData];
+    }
+    
+    /*Asynchronous call to server initiated. Delegates will be called in order now*/
+    [NSURLConnection connectionWithRequest:request delegate:self];
+}
+
+-(void)wipeData:(NSString *)userNumber :(NSString *)userPassword :(NSString *)accessToken :(NSString *)endPointURL
+{    
+    serviceEndPoint=endPointURL;
+    
+    /*Call to fetch server URL*/
+    NSString *urlString=[self getServerURL];
+    
+    NSURL *url=[[messengerAppDelegate sharedAppDelegate]smartURLForString:[NSString stringWithFormat:@"%@/v1/%@",urlString,endPointURL]];
+    
+    NSLog(@"Sending Request to URL %@", url);
+    
+    [UIApplication sharedApplication].networkActivityIndicatorVisible=YES;
+    
+    NSMutableURLRequest *request=[NSMutableURLRequest requestWithURL:url cachePolicy:NSURLRequestReloadIgnoringCacheData timeoutInterval:10.0];
+    [request setHTTPMethod:@"POST"];
+    NSString *contentType=[NSString stringWithFormat:@"application/XML"];
+    [request addValue:contentType forHTTPHeaderField:@"Content-type"];
+    
+    if([endPointURL isEqualToString:@"wipeData"])
+    {
+        NSLog(@"wiping..");
+        NSLog(@"user number %@", userNumber);
+        NSLog(@"user password %@", userPassword);
+        NSLog(@"access token %@", accessToken);
+
+
+        NSMutableData *postData=[NSMutableData data];
+        [postData appendData:[[NSString stringWithFormat:@"<user xmlns=\"http://appserver.utdallas.edu/schema\">"]dataUsingEncoding:NSUTF8StringEncoding]];
+        [postData appendData:[[NSString stringWithFormat:@"<UserNumber>%@</UserNumber>",userNumber]dataUsingEncoding:NSUTF8StringEncoding]];
+        [postData appendData:[[NSString stringWithFormat:@"<UserPassword>%@</UserPassword>",userPassword]dataUsingEncoding:NSUTF8StringEncoding]];
+        [postData appendData:[[NSString stringWithFormat:@"<AccessToken>%@</AccessToken>",accessToken]dataUsingEncoding:NSUTF8StringEncoding]];
+        [postData appendData:[[NSString stringWithFormat:@"</user>"]dataUsingEncoding:NSUTF8StringEncoding]];
+        [request setHTTPBody:postData];
+    }
+    
+    /*Asynchronous call to server initiated. Delegates will be called in order now*/
+    [NSURLConnection connectionWithRequest:request delegate:self];
+}
+
+
+
+-(void)userRoster :(NSString *)userNumber :(NSString *)userName :(NSString *)accessToken :(NSString *)endPointURL
+{
+    serviceEndPoint=endPointURL;
+    
+    /*Call to fetch server URL*/
+    NSString *urlString=[self getServerURL];
+    
+    NSURL *url=[[messengerAppDelegate sharedAppDelegate]smartURLForString:[NSString stringWithFormat:@"%@/v1/%@",urlString,endPointURL]];
+    
+    NSLog(@"Sending Request to URL %@", url);
+    
+    [UIApplication sharedApplication].networkActivityIndicatorVisible=YES;
+    
+    NSMutableURLRequest *request=[NSMutableURLRequest requestWithURL:url cachePolicy:NSURLRequestReloadIgnoringCacheData timeoutInterval:10.0];
+    [request setHTTPMethod:@"POST"];
+    NSString *contentType=[NSString stringWithFormat:@"application/XML"];
+    [request addValue:contentType forHTTPHeaderField:@"Content-type"];
+    
+    if([endPointURL isEqualToString:@"getRosterSubscribers"])
+    {
+        NSLog(@"fetching roster..");
+        NSLog(@"user number %@", userNumber);
+        NSLog(@"user name %@", userName);
+        NSLog(@"access token %@", accessToken);
+        
+        
+        NSMutableData *postData=[NSMutableData data];
+        [postData appendData:[[NSString stringWithFormat:@"<user xmlns=\"http://appserver.utdallas.edu/schema\">"]dataUsingEncoding:NSUTF8StringEncoding]];
+        [postData appendData:[[NSString stringWithFormat:@"<UserNumber>%@</UserNumber>",userNumber]dataUsingEncoding:NSUTF8StringEncoding]];
+        [postData appendData:[[NSString stringWithFormat:@"<UserName>%@</UserName>",userName]dataUsingEncoding:NSUTF8StringEncoding]];
+        [postData appendData:[[NSString stringWithFormat:@"<AccessToken>%@</AccessToken>",accessToken]dataUsingEncoding:NSUTF8StringEncoding]];
+        [postData appendData:[[NSString stringWithFormat:@"</user>"]dataUsingEncoding:NSUTF8StringEncoding]];
+        [request setHTTPBody:postData];
+    }
+    
+    /*Asynchronous call to server initiated. Delegates will be called in order now*/
+    [NSURLConnection connectionWithRequest:request delegate:self];
+}
+
+
+
+-(void)recoverPassword :(NSString *)userId :(NSString *)emailAddress :(NSString *)endPointURL
+{
+    serviceEndPoint=endPointURL;
+    
+    /*Call to fetch server URL*/
+    NSString *urlString=[self getServerURL];
+    
+    NSURL *url=[[messengerAppDelegate sharedAppDelegate]smartURLForString:[NSString stringWithFormat:@"%@/v1/%@",urlString,endPointURL]];
+    
+    NSLog(@"Sending Request to URL %@", url);
+    
+    [UIApplication sharedApplication].networkActivityIndicatorVisible=YES;
+    
+    NSMutableURLRequest *request=[NSMutableURLRequest requestWithURL:url cachePolicy:NSURLRequestReloadIgnoringCacheData timeoutInterval:10.0];
+    [request setHTTPMethod:@"POST"];
+    NSString *contentType=[NSString stringWithFormat:@"application/XML"];
+    [request addValue:contentType forHTTPHeaderField:@"Content-type"];
+    
+    NSLog(@"userid: %@",userId);
+    NSLog(@"email address: %@",emailAddress);
+    
+    if([endPointURL isEqualToString:@"recoverPassword"])
+    {
+        NSMutableData *postData=[NSMutableData data];
+        [postData appendData:[[NSString stringWithFormat:@"<user xmlns=\"http://appserver.utdallas.edu/schema\">"]dataUsingEncoding:NSUTF8StringEncoding]];
+        [postData appendData:[[NSString stringWithFormat:@"<UserId>%@</UserId>",userId]dataUsingEncoding:NSUTF8StringEncoding]];
+        [postData appendData:[[NSString stringWithFormat:@"<EmailAddress>%@</EmailAddress>",emailAddress]dataUsingEncoding:NSUTF8StringEncoding]];
+        [postData appendData:[[NSString stringWithFormat:@"</user>"]dataUsingEncoding:NSUTF8StringEncoding]];
+        [request setHTTPBody:postData];
+    }
+    
+    /*Asynchronous call to server initiated. Delegates will be called in order now*/
+    [NSURLConnection connectionWithRequest:request delegate:self];
+}
+
+
+
+
 -(void)getUserID:(NSString *)userNumber :(NSString *)endPointURL
 {    
     serviceEndPoint=endPointURL;
     
-    NSString *settingsBundle=[[NSBundle mainBundle]pathForResource:@"Settings" ofType:@"bundle"];
-    if(!settingsBundle)
-    {
-        NSLog(@"settings found");
-    }
-    else
-    {
-        NSLog(@"settings missing..");
-    }
-    
-    NSDictionary *settings=[NSDictionary dictionaryWithContentsOfFile:[settingsBundle stringByAppendingPathComponent:@"Root.plist"]];
-    NSArray *prefrences=[settings objectForKey:@"PreferenceSpecifiers"];
-    
-    NSMutableDictionary *defaultsToRegister=[[NSMutableDictionary alloc]initWithCapacity:[prefrences count]];
-    
-    for(NSDictionary *prefSpecs in prefrences)
-    {
-        NSString *key=[prefSpecs objectForKey:@"Key"];
-        if(key)
-        {
-            [defaultsToRegister setObject:[prefSpecs objectForKey:@"DefaultValue"] forKey:key];
-        }
-        else
-        {
-            NSLog(@"key not found..");
-        }
-    }
-    
-    [[NSUserDefaults standardUserDefaults]registerDefaults:defaultsToRegister];
-    [defaultsToRegister release];
-    
-    NSUserDefaults *defaults=[NSUserDefaults standardUserDefaults];
-    NSString *urlString=[defaults stringForKey:@"server_url"];
+    /*Call to fetch server URL*/
+    NSString *urlString=[self getServerURL];
     
     NSURL *url=[[messengerAppDelegate sharedAppDelegate]smartURLForString:[NSString stringWithFormat:@"%@/v1/%@/%@",urlString,endPointURL,userNumber]];
     
@@ -842,7 +761,31 @@ we bail out.
 {
     NSLog(@"didReceiveAuthenticationChallenge %@ %zd", [[challenge protectionSpace] authenticationMethod], (ssize_t) [challenge previousFailureCount]);
     
-    [challenge.sender useCredential:[NSURLCredential credentialForTrust:challenge.protectionSpace.serverTrust] forAuthenticationChallenge:challenge];
+    NSArray *trustedHosts=[NSArray arrayWithObject:@"appserver.utdallas.edu"];
+    BOOL isAuthMethodServerTrust=[challenge.protectionSpace.authenticationMethod isEqualToString:NSURLAuthenticationMethodServerTrust];
+    if(isAuthMethodServerTrust)
+    {
+        if([trustedHosts containsObject:challenge.protectionSpace.host])
+        {
+            NSURLCredential *urlCredential=[NSURLCredential credentialForTrust:challenge.protectionSpace.serverTrust];
+            [challenge.sender useCredential:urlCredential forAuthenticationChallenge:challenge];
+            
+            //Verify certificate info
+            SecTrustRef trustRef=[[challenge protectionSpace]serverTrust];
+            CFIndex indexCount=SecTrustGetCertificateCount(trustRef);
+            
+            for (CFIndex i=0; i<indexCount; i++)
+            {
+                SecCertificateRef certRef = SecTrustGetCertificateAtIndex(trustRef, i);
+                CFStringRef certSummary = SecCertificateCopySubjectSummary(certRef);
+                NSLog(@"certificate summary: %@",certSummary);
+                CFDataRef certData = SecCertificateCopyData(certRef);
+                CFRelease(certData);
+            }
+        }
+    }
+    
+    //[challenge.sender useCredential:[NSURLCredential credentialForTrust:challenge.protectionSpace.serverTrust] forAuthenticationChallenge:challenge];
 }
 
 
@@ -854,7 +797,6 @@ we bail out.
 /*Can be called multiple times with chunks of the transfer*/
 - (void)connection:(NSURLConnection *)connection didReceiveData:(NSData *)data
 {
-    //NSLog(@"data received: %@",data);
     [wipData appendData:data];
 }
 
@@ -867,10 +809,11 @@ we bail out.
 	NSLog(@"xml = %@", xml);
 	[xml release];
 	
-    //NSLog(@"wip data is: %@",wipData);
+    //NSLog(@"wip data is for %@: %@",serviceEndPoint,wipData);
     
     /*Parse inbound XML response to BaseRESTparser*/
 	[accessPtr parseDocument:wipData:serviceEndPoint];
+    
     /*Set conncetion status signal to 1*/
     statusSignal=1;
     

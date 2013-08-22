@@ -34,6 +34,22 @@ static NSString *userNumber;
 static NSString *accessToken;
 /*Stores the user's password*/
 static NSString *userpwd;
+/*Stores the entered password by user*/
+static NSString *passwordForWipeData;
+/*Stores the current entered password by user*/
+static NSString *oldPassword;
+/*Stores the current entered password by user*/
+static NSString *oldPasswordForChangeEmail;
+/*Stores the new entered password by user*/
+static NSString *newPassword;
+/*Stores the new password by user*/
+static NSString *retypeNewPassword;
+/*Stores the entered email address by user*/
+static NSString *newEmailAddress;
+/*Stores the re-entered email address by user*/
+static NSString *retypeNewEmailAddress;
+/*Stores the entered password by user*/
+//static NSString *passwordForChangeEmail;
 /*Stores the user's emailID*/
 static NSString *userMailID=NULL;
 /*Stores the selected group name from group table view*/
@@ -42,6 +58,8 @@ static NSString *groupName;
 static NSString *groupNumber;
 /*Stores the selected friend name from friend table view*/
 static NSString *friendname;
+/*Stores the list of buddys of logged in user*/
+static NSMutableArray *buddyLisyt;
 /*Mutable Array object to collate message post data from server*/
 static NSMutableArray *messagePostData;
 /*String to show message data in text view*/
@@ -60,6 +78,18 @@ static double locationLatitude;
 static double locationLongitude;
 /*Signal to tell if posts should be refreshed or not*/
 static int refreshPosts=0;
+/*Signal login view that user logn data has been successfully received or not*/
+static int loginSuccessSignal=0;
+
+/*This variable tells if user has no other members in his group, apart from him*/
+int nullFriendsCheck=0;
+
+/*Display & hiding wipe data view*/
+int showWipeView=0;
+
+/*Flag for change password or change email actions*/
+int changePasswordFlag=0;
+int changeEmailFlag=0;
 
 /*Geo-location vars*/
 static NSString *streetAddress;
@@ -80,44 +110,30 @@ static NSString *zip;
 @implementation messengerViewController
 
 
--(messengerAppDelegate *)appDelegate
-{
-    return (messengerAppDelegate *)[[UIApplication sharedApplication]delegate];
-}
-
--(XMPPStream *)xmppStream
-{
-    return [[self appDelegate]xmppStream];
-}
-
-- (XMPPRoster *)xmppRoster
-{
-	return [[self appDelegate] xmppRoster];
-}
-
 - (void)viewDidLoad
 {
-    NSLog(@"val is: %d",appearCheck);
+    NSLog(@"main view loaded with check: %d",appearCheck);
     
     /*Object instantiations*/
     groups=[[NSMutableArray alloc]init];
     friends=[[NSMutableArray alloc]init];
     messagePostData=[[NSMutableArray alloc]init];
+    buddyLisyt=[[NSMutableArray alloc]init];
+    
     restObj=[[messengerRESTclient alloc]init];
     groupViewObj=[[groupsTableViewViewController alloc]init];
     newPostObj=[[newPostViewController alloc]init];
     detailMsgViewObj=[[detailMessageViewController alloc]init];
-    
-    messengerAppDelegate *appDel=[self appDelegate];
-    appDel._chatDelegate=self;
-    
+    friendObj=[[friendsViewController alloc]init];
+
     mainViewTab.delegate=self;
     
     UIImageView *bg = [[UIImageView alloc] initWithImage:[UIImage imageNamed:@"texture08.jpg"]];
     [postsViewer setBackgroundView:bg];
     
     [super viewDidLoad];
-
+    
+    
     /*Start Location updater everytime view loads up*/
     [self initLocUpdate];
     
@@ -126,20 +142,11 @@ static NSString *zip;
     [refreshControl addTarget:self action:@selector(refreshTableView) forControlEvents:UIControlEventValueChanged];
     [postsViewer addSubview:refreshControl];
     
+    connProgress.hidden=TRUE;
     connProgress.transform=CGAffineTransformMakeScale(1.5, 1.5);
-        
-    /*Set the label to display the logged-in user's ID
-    UILabel *userIdLabel=[[UILabel alloc]initWithFrame:CGRectMake(130, 42, 120, 30)];
-    NSString *welcomeMsg=username;
-    welcomeMsg=[welcomeMsg stringByAppendingString:@", Hello !"];
-    userIdLabel.text=welcomeMsg;
-    userIdLabel.numberOfLines=3;
-    userIdLabel.backgroundColor=[UIColor clearColor];
-    userIdLabel.textColor=[UIColor whiteColor];
-    userIdLabel.font=[UIFont systemFontOfSize:18.0];
-    [self.view addSubview: userIdLabel];
-     */
+    
 }
+
 
 -(void)initLocUpdate
 {
@@ -158,10 +165,32 @@ static NSString *zip;
 {
     if(groupName!=NULL)
     {
-       [self showPostData:groupNumber];
+        [self clearAllPosts];
+        [postsViewer setUserInteractionEnabled:FALSE];
+        friendsTab.enabled=FALSE;
+        groupsTab.enabled=FALSE;
+        postBtn.enabled=FALSE;
+        [self showPostData:groupNumber];
     }
-    [postsViewer reloadData];
-    [refreshControl endRefreshing];
+    double delayInSeconds = 3.5;
+    dispatch_time_t popTime = dispatch_time(DISPATCH_TIME_NOW, (int64_t)(delayInSeconds * NSEC_PER_SEC));
+    dispatch_after(popTime, dispatch_get_main_queue(), ^(void){
+        [postsViewer reloadData];
+        [refreshControl endRefreshing];
+        [postsViewer setUserInteractionEnabled:TRUE];
+        friendsTab.enabled=TRUE;
+        groupsTab.enabled=TRUE;
+        postBtn.enabled=TRUE;
+    });
+    
+    if([groupName isEqualToString:@""]||[groupName isEqualToString:@" "])
+    {
+        postBtn.enabled=FALSE;
+    }
+    else
+    {
+        postBtn.enabled=TRUE;
+    }
 
     /*
     double delayInSeconds = 1.0;
@@ -175,7 +204,7 @@ static NSString *zip;
 -(void)viewDidAppear:(BOOL)animated
 {
     /*load up login view*/
-    NSLog(@"check_flag: %d",appearCheck);
+    NSLog(@"view appeard check: %d",appearCheck);
     postsViewer.dataSource=self;
     postsViewer.delegate=self;
     if(appearCheck==0)
@@ -187,6 +216,8 @@ static NSString *zip;
     }
     else
     {
+        appearCheck++;
+
         NSString *titleStr=[[NSString alloc]initWithString:username];
         titleStr=[titleStr stringByAppendingString:@", Hello!"];
 
@@ -196,21 +227,143 @@ static NSString *zip;
         }
         
         [navBar.topItem setTitle:titleStr];
+        
+        if(appearCheck==2)
+        {
+            /*Get the user's roster of buddies*/
+            dispatch_async(dispatch_get_main_queue(), ^{
+                [restObj userRoster:userNumber :username :accessToken :@"getRosterSubscribers"];
+            });
+            
+            double delayInSeconds = 2.0;
+            dispatch_time_t popTime = dispatch_time(DISPATCH_TIME_NOW, (int64_t)(delayInSeconds * NSEC_PER_SEC));
+            dispatch_after(popTime, dispatch_get_main_queue(), ^(void){
+                NSLog(@"receiving roster list..");
+                retVal=[restObj returnValue];
+                
+                if(retVal==1)
+                {
+                    NSLog(@"buddies recived are: %@",buddyLisyt);
+                    if(!friendObj)
+                    {
+                        friendObj=[[friendsViewController alloc]init];
+                    }
+                    [friendObj receiveAllBuddies:buddyLisyt];
+                }
+                else if (retVal==-1)
+                {
+                    NSLog(@"buddies not received!");
+                }
+                else if (retVal==0)
+                {
+                    double delayInSeconds = 2.0;
+                    dispatch_time_t popTime = dispatch_time(DISPATCH_TIME_NOW, (int64_t)(delayInSeconds * NSEC_PER_SEC));
+                    dispatch_after(popTime, dispatch_get_main_queue(), ^(void){
+                        NSLog(@"receiving roster list..");
+                        retVal=[restObj returnValue];
+                        
+                        if(retVal==1)
+                        {
+                            NSLog(@"buddies recived are: %@",buddyLisyt);
+                            if(!friendObj)
+                            {
+                                friendObj=[[friendsViewController alloc]init];
+                            }
+                            [friendObj receiveAllBuddies:buddyLisyt];
+                        }
+                        else if (retVal==-1)
+                        {
+                            NSLog(@"buddies not received!");
+                        }
+                        else if (retVal==0)
+                        {
+                            /*Get the user's roster of buddies*/
+                            dispatch_async(dispatch_get_main_queue(), ^{
+                                [restObj userRoster:userNumber :username :accessToken :@"getRosterSubscribers"];
+                            });
+                            
+                            double delayInSeconds = 2.0;
+                            dispatch_time_t popTime = dispatch_time(DISPATCH_TIME_NOW, (int64_t)(delayInSeconds * NSEC_PER_SEC));
+                            dispatch_after(popTime, dispatch_get_main_queue(), ^(void){
+                                NSLog(@"receiving roster list..");
+                                retVal=[restObj returnValue];
+                                
+                                if(retVal==1)
+                                {
+                                    NSLog(@"buddies recived are: %@",buddyLisyt);
+                                    if(!friendObj)
+                                    {
+                                        friendObj=[[friendsViewController alloc]init];
+                                    }
+                                    [friendObj receiveAllBuddies:buddyLisyt];
+                                }
+                                else if (retVal==-1)
+                                {
+                                    NSLog(@"buddies not received!");
+                                }
+                                else if (retVal==0)
+                                {
+                                    double delayInSeconds = 2.0;
+                                    dispatch_time_t popTime = dispatch_time(DISPATCH_TIME_NOW, (int64_t)(delayInSeconds * NSEC_PER_SEC));
+                                    dispatch_after(popTime, dispatch_get_main_queue(), ^(void){
+                                        NSLog(@"receiving roster list..");
+                                        retVal=[restObj returnValue];
+                                        
+                                        if(retVal==1)
+                                        {
+                                            NSLog(@"buddies recived are: %@",buddyLisyt);
+                                            if(!friendObj)
+                                            {
+                                                friendObj=[[friendsViewController alloc]init];
+                                            }
+                                            [friendObj receiveAllBuddies:buddyLisyt];
+                                        }
+                                        else if (retVal==-1)
+                                        {
+                                            NSLog(@"buddies not received!");
+                                        }
+                                        else if (retVal==0)
+                                        {
+                                            NSLog(@"buddies not received due to connection error");
+                                        }
+                                    });
+                                }
+                            });            
+                        }
+                    });
+                }
+            });            
+        }
     }
     
     if(refreshPosts==1)
     {
+        [postsViewer reloadData];
+        connProgress.hidden=FALSE;
+        [connProgress startAnimating];
+        [postsViewer setUserInteractionEnabled:FALSE];
+        friendsTab.enabled=FALSE;
+        groupsTab.enabled=FALSE;
+        postBtn.enabled=FALSE;
+        
         /*Reload the table with newly generated posts*/
         if(groupName!=NULL)
         {
+            [self clearAllPosts];
             [self showPostData:groupNumber];
         }
-        if(appearCheck==1)
+        if(appearCheck>1)
         {
-            double delayInSeconds = 0.5;
+            double delayInSeconds = 3.5;
             dispatch_time_t popTime = dispatch_time(DISPATCH_TIME_NOW, (int64_t)(delayInSeconds * NSEC_PER_SEC));
             dispatch_after(popTime, dispatch_get_main_queue(), ^(void){
                 [postsViewer reloadData];
+                connProgress.hidden=TRUE;
+                [connProgress stopAnimating];
+                [postsViewer setUserInteractionEnabled:TRUE];
+                friendsTab.enabled=TRUE;
+                groupsTab.enabled=TRUE;
+                postBtn.enabled=TRUE;
             });
         }
         refreshPosts=0;
@@ -223,12 +376,56 @@ static NSString *zip;
     /*If no group selected, keep post button disabled*/
     if(groupName!=NULL)
     {
-        postBtn.enabled=TRUE;
+        if([groupName isEqualToString:@""]||[groupName isEqualToString:@" "])
+        {
+            postBtn.enabled=FALSE;
+        }
+        else
+        {
+            postBtn.enabled=TRUE;
+        }
     }
     else
     {
         postBtn.enabled=FALSE;
     }
+}
+
+
+
+/*To be called by friends Viewer class to return fetched roster items*/
+-(void)fetchRosterForMe
+{
+    /*Get the user's roster of buddies*/
+    dispatch_async(dispatch_get_main_queue(), ^{
+        restObj=[[messengerRESTclient alloc]init];
+        [restObj userRoster:userNumber :username :accessToken :@"getRosterSubscribers"];
+    });
+    
+    double delayInSeconds = 2.0;
+    dispatch_time_t popTime = dispatch_time(DISPATCH_TIME_NOW, (int64_t)(delayInSeconds * NSEC_PER_SEC));
+    dispatch_after(popTime, dispatch_get_main_queue(), ^(void){
+        NSLog(@"receiving roster list..");
+        retVal=[restObj returnValue];
+        
+        if(retVal==1)
+        {
+            NSLog(@"buddies recived are: %@",buddyLisyt);
+            if(!friendObj)
+            {
+                friendObj=[[friendsViewController alloc]init];
+            }
+            [friendObj receiveAllBuddies:buddyLisyt];
+        }
+        else if (retVal==-1)
+        {
+            NSLog(@"buddies not received!");
+        }
+        else if (retVal==0)
+        {
+             NSLog(@"buddies not received due to connection error");
+        }
+    });
 }
 
 
@@ -245,7 +442,7 @@ static NSString *zip;
     if(toReturn==1)
     {
         [groups addObjectsFromArray:arrayInput];
-        NSLog(@"group data received: %@",groups);
+        //NSLog(@"group data received: %@",groups);
         return NULL;
     }
     /*If toReturn is 0: return the collated data to show in table*/
@@ -262,16 +459,16 @@ static NSString *zip;
     /*If toReturn is 1: collate the data inbound into friends object*/
     if(toReturn==1)
     {
-    
         [friends addObjectsFromArray:arrayInput];
-        NSLog(@"friend data received: %@",friends);
+        //NSLog(@"friend data received: %@",friends);
         return NULL;
     }
     /*If toReturn is 0: return the collated data to show in table*/
     else
     {
-        NSLog(@"showing friend data: %@",friendName);
-        return friendName;
+      
+        NSLog(@"showing friend data: %@",friendUserId);
+        return friendUserId;
     }
 }
 
@@ -281,9 +478,17 @@ static NSString *zip;
 {
     groupNumber=[indexVal retain];
     NSLog(@"group number of selected group: %@",groupNumber);
-    newPostObj=[[newPostViewController alloc]init];
-    [newPostObj getGroupNumber:groupNumber];
-    [self showPostData:groupNumber];
+    if(![groupNumber isEqualToString:@"-1"])
+    {
+        newPostObj=[[newPostViewController alloc]init];
+        [newPostObj getGroupNumber:groupNumber];
+        postBtn.enabled=TRUE;
+    }
+    else
+    {
+        NSLog(@"invalid group number");
+        postBtn.enabled=FALSE;
+    }
 }
 
 -(void)setSelectedGroupName:(NSString *)indexVal
@@ -316,16 +521,6 @@ static NSString *zip;
 {
     NSLog(@"user details: %@",userData);
     
-    /*Remove status
-    if([userData containsObject:@"true"])
-    {
-        [userData removeObject:@"true"];
-    }
-    if([userData containsObject:@"false"])
-    {
-        [userData removeObject:@"false"];
-    }
-    */
     if([userData count]>0)
     {
         /*First add user number as per xml response sequence, then add access-token. If anything else is included in xml response then put their cases respectively in order*/
@@ -343,6 +538,9 @@ static NSString *zip;
         /*If both are not null, then send these received parameters to the groups and chat view respectively*/
         if(userNumber!=NULL && accessToken !=NULL)
         {
+            /*Set login success signal to 1*/
+            loginSuccessSignal=1;
+            
             /*Send user number to groups table view controller*/
             groupViewObj=[[groupsTableViewViewController alloc]init];
             [groupViewObj getUserNumber:userNumber];
@@ -356,14 +554,33 @@ static NSString *zip;
             [userChatObj getUserNumber:userNumber];
             [userChatObj getUserId:username];
         }
+        else
+        {
+            NSLog(@"login data not fully received");
+            loginSuccessSignal=0;
+        }
     }
+}
+
+/*Return the current login status signal*/
+-(int)tellLoginStatus
+{
+    NSLog(@"returning status:%d",loginSuccessSignal);
+    return loginSuccessSignal;
 }
 
 -(void)showPostData:(NSString *)groupName
 {
+    [self clearAllPosts];
+
     restObj=[[messengerRESTclient alloc]init];
     dispatch_async(dispatch_get_main_queue(), ^{
         [restObj showPostData:userNumber:groupNumber:locationLatitude:locationLongitude:accessToken :@"getGroupMessages"];
+    });
+    
+    double delayInSeconds = 3.0;
+    dispatch_time_t popTime = dispatch_time(DISPATCH_TIME_NOW, (int64_t)(delayInSeconds * NSEC_PER_SEC));
+    dispatch_after(popTime, dispatch_get_main_queue(), ^(void){
         retVal=[restObj returnValue];
         if(retVal==1)
         {
@@ -373,15 +590,20 @@ static NSString *zip;
             NSLog(@"messages data count: %d",[messagePostData count]);
             NSLog(@"number of messages: %u",[messagePostData count]/2);
             
-            while(k<[messagePostData count] && [messagePostData count]!=1 && [messagePostData count]%2==0)
+            while(k<[messagePostData count] && [messagePostData count]!=1)
             {
+                /*Remove the last index, in case of out-of-sequence input message post sequence*/
+                if([messagePostData count]%2!=0)
+                {
+                    [messagePostData removeObjectAtIndex:[messagePostData count]-1];
+                }
+                
                 k++;
                 messageDataToShow=[messagePostData objectAtIndex:k];
                 userNameDataToShow=[messagePostData objectAtIndex:k-1];
                 k++;
                 showPosts=1;
             }
-            [self clearAllPosts];
         }
         else if(retVal==-1)
         {
@@ -391,10 +613,47 @@ static NSString *zip;
         }
         else if(retVal==0)
         {
-            NSLog(@"retval is: %d",retVal);
-            UIAlertView *connNullAlert=[[UIAlertView alloc]initWithTitle:@"Connection Error" message:@"Unable to contact server" delegate:nil cancelButtonTitle:@"Ok" otherButtonTitles:nil, nil];
-            [connNullAlert show];
-            [connNullAlert release];
+            double delayInSeconds = 4.0;
+            dispatch_time_t popTime = dispatch_time(DISPATCH_TIME_NOW, (int64_t)(delayInSeconds * NSEC_PER_SEC));
+            dispatch_after(popTime, dispatch_get_main_queue(), ^(void){
+                retVal=[restObj returnValue];
+                if(retVal==1)
+                {
+                    int k=0;
+                    messageDataToShow=NULL;
+                    userNameDataToShow=NULL;
+                    NSLog(@"messages data count: %d",[messagePostData count]);
+                    NSLog(@"number of messages: %u",[messagePostData count]/2);
+                    
+                    while(k<[messagePostData count] && [messagePostData count]!=1)
+                    {
+                        /*Remove the last index, in case of out-of-sequence input message post sequence*/
+                        if([messagePostData count]%2!=0)
+                        {
+                            [messagePostData removeObjectAtIndex:[messagePostData count]-1];
+                        }
+                        
+                        k++;
+                        messageDataToShow=[messagePostData objectAtIndex:k];
+                        userNameDataToShow=[messagePostData objectAtIndex:k-1];
+                        k++;
+                        showPosts=1;
+                    }
+                }
+                else if(retVal==-1)
+                {
+                    UIAlertView *msgListAlert=[[UIAlertView alloc]initWithTitle:@"Failed" message:[NSString stringWithFormat:@"Message list could not be retrieved. Please try again"] delegate:self cancelButtonTitle:@"OK" otherButtonTitles:nil, nil];
+                    [msgListAlert show];
+                    [msgListAlert release];
+                }
+                else if(retVal==0)
+                {
+                    NSLog(@"retval is: %d",retVal);
+                    UIAlertView *connNullAlert=[[UIAlertView alloc]initWithTitle:@"Connection Error" message:@"Unable to contact server. Please try again." delegate:nil cancelButtonTitle:@"Ok" otherButtonTitles:nil, nil];
+                    [connNullAlert show];
+                    [connNullAlert release];
+                }
+            });
         }
     });
 }
@@ -406,13 +665,17 @@ static NSString *zip;
     [messagePostData retain];
 }
 
+-(void)collectedRosterSubscribers:(NSMutableArray *)inputArray
+{
+    [buddyLisyt addObjectsFromArray:[inputArray retain]];
+    //NSLog(@"receiving buddy contents..%@",buddyLisyt);
+}
+
 /*Setting the username received from loginView*/
 -(void)getUserId:(NSString *)userId :(NSString *)userPassword
 {
-    userpwd=[[NSString alloc]init];
-    username=[[NSString alloc]init];
     username=[userId retain];
-    //userpwd=[userPassword retain];
+    userpwd=[userPassword retain];
     
     /*Signal userId to groupsTableView(to be used for new group creation*/
     
@@ -453,6 +716,7 @@ static NSString *zip;
         [groupViewObj getLocationCoords:latPos :longPos];
         
         /*Signal location co-ords to groupsTableView(to be used for posting messages to groups)*/
+        newPostObj=[[newPostViewController alloc]init];
         [newPostObj getLocationCoords:latPos :longPos];
         
         /*
@@ -485,6 +749,8 @@ static NSString *zip;
     }
 }
 
+
+
 /*This method extracts reverse geocoding information from a given coordinate position on earth*/
 -(void)getGeoCoords:(double)latitude :(double)longitude
 {
@@ -507,11 +773,37 @@ static NSString *zip;
                 state=[locationDictionary objectForKey:(NSString *)kABPersonAddressStateKey];
                 zip=[locationDictionary objectForKey:(NSString *)kABPersonAddressZIPKey];
                 
+                /*Detect for "En-Dash" unicode character & replace it
+                 with a "-"
+                 */
+                //streetAddress=@"2520–2524 Rutford Ave, 2510–2514, Richardson, Texas";
+                
+                for(int k=0;k<[streetAddress length]-1;k++)
+                {
+                    const unichar escapeSeq=[streetAddress characterAtIndex:k];
+                    
+                    if(escapeSeq == L'\u2013')
+                    {
+                        NSLog(@"Unicode En-Dash character detected. Replacing it..");
+                        NSString *beforeSeq=[[streetAddress substringToIndex:k]retain];
+                        NSString *afterSeq=[[streetAddress substringFromIndex:k+1]retain];
+                        streetAddress=beforeSeq;
+                        streetAddress=[[streetAddress stringByAppendingString:@"-"]retain];
+                        streetAddress= [[streetAddress stringByAppendingString:afterSeq]retain];
+                        
+                        [beforeSeq release];
+                        [afterSeq release];
+                    }
+                }
+
+
+                /*
                 NSLog(@"logged in from:");
                 NSLog(@"street: %@",streetAddress);
                 NSLog(@"city: %@",city);
                 NSLog(@"state: %@",state);
                 NSLog(@"zip: %@",zip);
+                */ 
             }
     }];
 }
@@ -549,10 +841,14 @@ static NSString *zip;
     NSLog(@"Location updater stoppped.");
 }
 
--(void)invokeChatView
+-(void)invokeChatView:(NSString *)sender :(NSString *)messageData
 {
-    userChatObj=[[userChatViewController alloc]init];
-    [self presentViewController:userChatObj animated:YES completion:nil];
+    NSString *alertTitle=[[NSString alloc]initWithString:@"New message from "];
+    alertTitle=[alertTitle stringByAppendingString:sender];
+    
+    newChatMessage=[[UIAlertView alloc]initWithTitle:alertTitle message:messageData delegate:self cancelButtonTitle:nil otherButtonTitles:@"Ok", nil];
+    [newChatMessage show];
+    [newChatMessage release];
 }
 
 #pragma mark - Table view data source
@@ -599,18 +895,31 @@ static NSString *zip;
         if(forUser<[messagePostData count]/2)
         {
             forUser+=forUser;
-            cell.textLabel.text=[messagePostData objectAtIndex:forUser+1];
-            cell.textLabel.font=[UIFont fontWithName:@"Marker Felt" size:18.0];
-            cell.textLabel.textColor=[UIColor whiteColor];
+            if([[messagePostData objectAtIndex:forUser+1] isEqualToString:@"61"])
+            {
+                cell.textLabel.text=@"";
+            }
+            else
+            {
+                cell.textLabel.text=[messagePostData objectAtIndex:forUser+1];
+                cell.textLabel.font=[UIFont fontWithName:@"Marker Felt" size:18.0];
+                cell.textLabel.textColor=[UIColor whiteColor];
+            }
 
             /*Build the string to be displayed in cell's detail text label*/
-            cellDetailTextLabel=[[NSString alloc]initWithString:@"says "];
-            cellDetailTextLabel=[cellDetailTextLabel stringByAppendingString:[messagePostData objectAtIndex:forUser]];
-            cellDetailTextLabel=[cellDetailTextLabel stringByAppendingString:@".."];
-            cell.detailTextLabel.text=cellDetailTextLabel;
-            cell.detailTextLabel.font=[UIFont fontWithName:@"Marker Felt" size:14.0];
-            cell.detailTextLabel.textColor=[UIColor lightGrayColor];
-            
+            if([[messagePostData objectAtIndex:forUser] isEqualToString:@"false"])
+            {
+                cell.detailTextLabel.text=@"";
+            }
+            else
+            {
+                cellDetailTextLabel=[[NSString alloc]initWithString:@"says "];
+                cellDetailTextLabel=[cellDetailTextLabel stringByAppendingString:[messagePostData objectAtIndex:forUser]];
+                cellDetailTextLabel=[cellDetailTextLabel stringByAppendingString:@".."];
+                cell.detailTextLabel.text=cellDetailTextLabel;
+                cell.detailTextLabel.font=[UIFont fontWithName:@"Marker Felt" size:14.0];
+                cell.detailTextLabel.textColor=[UIColor lightGrayColor];
+            }
         }
         else
         {
@@ -620,6 +929,22 @@ static NSString *zip;
     }
     return cell;
 }
+
+
+- (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath
+{
+	[tableView deselectRowAtIndexPath:indexPath animated:YES];
+    UITableViewCell *selectedCell=[tableView cellForRowAtIndexPath:indexPath];
+    
+    selectedPost=selectedCell.textLabel.text;
+    NSLog(@"you selected: %@",selectedPost);
+    [detailMsgViewObj getPostMessageToDisplay:selectedPost];
+    
+    [self presentViewController:detailMsgViewObj animated:YES completion:nil];
+}
+
+
+
 
 #pragma mark - Tab-bar delegate
 
@@ -634,13 +959,16 @@ static NSString *zip;
         [connProgress startAnimating];
         friendsTab.enabled=FALSE;
         groupsTab.enabled=FALSE;
+    
         
         if(groupNumber!=NULL)
         {
-            NSLog(@"passing for user: %@ and group; %@",username,groupNumber);
+            NSLog(@"passing for user: %@, %@ and group; %@",username,userNumber,groupNumber);
             dispatch_async(dispatch_get_main_queue(), ^{
                 [restObj getFriendList:userNumber :groupNumber :locationLatitude :locationLongitude :accessToken :@"getUsersInGroup" ];
-                double delayInSeconds = 1.3;
+            });
+
+                double delayInSeconds = 2.3;
                 dispatch_time_t popTime = dispatch_time(DISPATCH_TIME_NOW, (int64_t)(delayInSeconds * NSEC_PER_SEC));
                 dispatch_after(popTime, dispatch_get_main_queue(), ^(void){
                     retVal=[restObj returnValue];
@@ -651,15 +979,41 @@ static NSString *zip;
                         friendNumber=[[NSMutableArray alloc]init];
                         friendUserId=[[NSMutableArray alloc]init];
                         
-                        if([friends count]>0 && [friends count]%2==0)
+                        /*Remove data of logged in user*/
+                        if([friends containsObject:userNumber])
+                        {
+                            NSUInteger index=[friends indexOfObject:userNumber];
+                            [friends removeObject:userNumber];
+                            [friends removeObjectAtIndex:index];
+                            [friends removeObjectAtIndex:index];
+                            
+                            if([friends count]==0)
+                            {
+                                nullFriendsCheck=1;
+                            }
+                            else
+                            {
+                                nullFriendsCheck=0;
+                            }
+                        }
+                        
+                        if([friends count]>0 && [friends count]%3==0)
                         {
                             for(int k=0;k<[friends count];k++)
                             {
                                 [friendNumber addObject:[friends objectAtIndex:k]];
                                 [friendName addObject:[friends objectAtIndex:k+1]];
-                                k++;
+                                [friendUserId addObject:[friends objectAtIndex:k+2]];
+                                k+=2;
                             }
                             
+                            for(int k=0;k<[buddyLisyt count];k++)
+                            {
+                                if([friendUserId containsObject:[buddyLisyt objectAtIndex:k]])
+                                {
+                                    [friendUserId removeObject:[buddyLisyt objectAtIndex:k]];
+                                }
+                            }
                             findFriendObj=[[findFriendViewController alloc]init];
                             [findFriendObj getFriendNumbers:friendNumber];
                             
@@ -675,15 +1029,15 @@ static NSString *zip;
                         }
                         else
                         {
-                            UIAlertView *tryAgainAlert=[[UIAlertView alloc]initWithTitle:@"Please try again" message:nil delegate:self cancelButtonTitle:nil otherButtonTitles:@"OK", nil];
-                            [tryAgainAlert show];
-                            [tryAgainAlert release];
-                            
                             postBtn.enabled=TRUE;
                             connProgress.hidden=TRUE;
                             friendsTab.enabled=TRUE;
                             groupsTab.enabled=TRUE;
                             [connProgress stopAnimating];
+                            
+                            friendsViewController *fTblView=[[friendsViewController alloc]initWithNibName:nil bundle:nil];
+                            [self presentViewController:fTblView animated:YES completion:NULL];
+                            [fTblView release];
                         }
                     }
                     else
@@ -694,12 +1048,11 @@ static NSString *zip;
                         groupsTab.enabled=TRUE;
                         [connProgress stopAnimating];
                         
-                        UIAlertView *connErr=[[UIAlertView alloc]initWithTitle:@"Connection Error" message:@"Unable to contact server" delegate:nil cancelButtonTitle:@"Ok" otherButtonTitles:nil, nil];
+                        UIAlertView *connErr=[[UIAlertView alloc]initWithTitle:@"Connection Error" message:@"Unable to contact server. Please try again." delegate:nil cancelButtonTitle:@"Ok" otherButtonTitles:nil, nil];
                         [connErr show];
                         [connErr release];
                     }
                 });
-            });
         }
         else
         {
@@ -707,7 +1060,6 @@ static NSString *zip;
             [tryAgainAlert show];
             [tryAgainAlert release];
             
-            postBtn.enabled=TRUE;
             connProgress.hidden=TRUE;
             friendsTab.enabled=TRUE;
             groupsTab.enabled=TRUE;
@@ -726,7 +1078,7 @@ static NSString *zip;
         dispatch_async(dispatch_get_main_queue(), ^{
             [restObj showMyGroups:userNumber:locationLatitude:locationLongitude:accessToken :@"listMemberGroups"];
         });
-        double delayInSeconds = 1.0;
+        double delayInSeconds = 2.0;
         dispatch_time_t popTime = dispatch_time(DISPATCH_TIME_NOW, (int64_t)(delayInSeconds * NSEC_PER_SEC));
         dispatch_after(popTime, dispatch_get_main_queue(), ^(void){
             retVal=[restObj returnValue];
@@ -744,48 +1096,802 @@ static NSString *zip;
             }
             else
             {
-                postBtn.enabled=TRUE;
-                connProgress.hidden=TRUE;
-                friendsTab.enabled=TRUE;
-                groupsTab.enabled=TRUE;
-                [connProgress stopAnimating];
-                
-                UIAlertView *connErr=[[UIAlertView alloc]initWithTitle:@"Connection Error" message:@"Unable to contact server" delegate:nil cancelButtonTitle:@"Ok" otherButtonTitles:nil, nil];
-                [connErr show];
-                [connErr release];
+                double delayInSeconds = 4.0;
+                dispatch_time_t popTime = dispatch_time(DISPATCH_TIME_NOW, (int64_t)(delayInSeconds * NSEC_PER_SEC));
+                dispatch_after(popTime, dispatch_get_main_queue(), ^(void){
+                    retVal=[restObj returnValue];
+                    if(retVal==1)
+                    {
+                        postBtn.enabled=TRUE;
+                        connProgress.hidden=TRUE;
+                        friendsTab.enabled=TRUE;
+                        groupsTab.enabled=TRUE;
+                        [connProgress stopAnimating];
+                        
+                        groupsTableViewViewController *gTblView=[[groupsTableViewViewController alloc]initWithNibName:nil bundle:nil];
+                        [self presentViewController:gTblView animated:YES completion:NULL];
+                        [gTblView release];
+                    }
+                    else
+                    {
+                        postBtn.enabled=TRUE;
+                        connProgress.hidden=TRUE;
+                        friendsTab.enabled=TRUE;
+                        groupsTab.enabled=TRUE;
+                        [connProgress stopAnimating];
+                        
+                        UIAlertView *connErr=[[UIAlertView alloc]initWithTitle:@"Connection Error" message:@"Unable to contact server. Please try again." delegate:nil cancelButtonTitle:@"Ok" otherButtonTitles:nil, nil];
+                        [connErr show];
+                        [connErr release];
+                    }
+                });
             }
         });
     }
 }
 
-- (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath
+
+
+-(IBAction)settingsMenu
 {
-	[tableView deselectRowAtIndexPath:indexPath animated:YES];
-    UITableViewCell *selectedCell=[tableView cellForRowAtIndexPath:indexPath];
-    
-    selectedPost=selectedCell.textLabel.text;
-    NSLog(@"you selected: %@",selectedPost);
-    [detailMsgViewObj getPostMessageToDisplay:selectedPost];
-    
-    [self presentViewController:detailMsgViewObj animated:YES completion:nil];
+    if(showWipeView==0)
+    {
+        showWipeView=1;
+        
+        [postsViewer setUserInteractionEnabled:FALSE];
+        postBtn.enabled=FALSE;
+        friendsTab.enabled=FALSE;
+        groupsTab.enabled=FALSE;
+        
+        wipeDataView=[[UIView alloc]initWithFrame:CGRectMake(1.0, 46.0, 144.0, 165.0)];
+        [wipeDataView setAlpha:0.0];
+        [self.view addSubview:wipeDataView];
+        
+        /*Add up frills to this view*/
+        wipeDataView.layer.cornerRadius=12.0;
+        [wipeDataView.layer setMasksToBounds:YES];
+        wipeDataView.layer.backgroundColor=[[UIColor blackColor]colorWithAlphaComponent:0.9].CGColor;
+        wipeDataView.layer.borderColor=[UIColor lightGrayColor].CGColor;
+        wipeDataView.layer.borderWidth=1.0;
+        
+        [UIView animateWithDuration:0.4 animations:^{
+            [wipeDataView setAlpha:0.9];
+            [postsViewer setAlpha:0.75];
+        }];
+        
+        /*Add the alertview label*/
+        settingsLabel=[[UILabel alloc]initWithFrame: CGRectMake(wipeDataView.frame.origin.x+43, wipeDataView.frame.origin.y-38, 62.0, 21.0)];
+        settingsLabel.text=@"Settings";
+        settingsLabel.textColor=[UIColor whiteColor];
+        settingsLabel.font=[UIFont fontWithName:@"Marker Felt" size:16.0];
+        settingsLabel.backgroundColor=[UIColor clearColor];
+        [wipeDataView addSubview:settingsLabel];
+        
+        /*Add the imageview for patch*/
+        patchView=[[UIImageView alloc]initWithFrame: CGRectMake(wipeDataView.frame.origin.x, wipeDataView.frame.origin.y-24, 144.0, 12.0)];
+        patchView.image=[UIImage imageNamed:@"settings_patch.png"];
+        [wipeDataView addSubview:patchView];
+        
+        /*Add the change password button*/
+        changePasswordBtn=[UIButton buttonWithType:UIButtonTypeCustom];
+        changePasswordBtn.frame=CGRectMake(wipeDataView.frame.origin.x+13, wipeDataView.frame.origin.y-1, 110.0, 31.0);
+        [changePasswordBtn addTarget:self action:@selector(changeUserPassword) forControlEvents:UIControlEventTouchUpInside];
+        changePasswordBtn.titleLabel.font=[UIFont fontWithName:@"Marker Felt" size:13.0];
+        [changePasswordBtn setTitleColor:[UIColor colorWithRed:0.447 green:0.62 blue:0.91 alpha:1.0] forState:UIControlStateNormal];
+        [changePasswordBtn setTitle:@"Change Password" forState:UIControlStateNormal];
+        [wipeDataView addSubview:changePasswordBtn];
+
+        /*Add the change password button*/
+        changeEmailBtn=[UIButton buttonWithType:UIButtonTypeCustom];
+        changeEmailBtn.frame=CGRectMake(wipeDataView.frame.origin.x+13, wipeDataView.frame.origin.y+33, 110.0, 31.0);
+        [changeEmailBtn addTarget:self action:@selector(changeUserEmailAddress) forControlEvents:UIControlEventTouchUpInside];
+        changeEmailBtn.titleLabel.font=[UIFont fontWithName:@"Marker Felt" size:13.0];
+        [changeEmailBtn setTitleColor:[UIColor colorWithRed:0.447 green:0.62 blue:0.91 alpha:1.0] forState:UIControlStateNormal];
+        [changeEmailBtn setTitle:@"Change Email" forState:UIControlStateNormal];
+        [wipeDataView addSubview:changeEmailBtn];
+        
+        /*Add the delete all button*/
+        deleteAllBtn=[UIButton buttonWithType:UIButtonTypeCustom];
+        deleteAllBtn.frame=CGRectMake(wipeDataView.frame.origin.x+31, wipeDataView.frame.origin.y+85, 75.0, 18.0);
+        [deleteAllBtn addTarget:self action:@selector(wipeAllUserData) forControlEvents:UIControlEventTouchUpInside];
+        deleteAllBtn.titleLabel.font=[UIFont fontWithName:@"Marker Felt" size:14.0];
+        [deleteAllBtn setTitleColor:[UIColor redColor] forState:UIControlStateNormal];
+        [deleteAllBtn setTitle:@"Erase me !" forState:UIControlStateNormal];
+        [wipeDataView addSubview:deleteAllBtn];
+    }
+    else if (showWipeView==1)
+    {
+        showWipeView=0;
+        
+        [postsViewer setUserInteractionEnabled:TRUE];
+        if(groupNumber!=NULL)
+        {
+            postBtn.enabled=TRUE;
+        }
+        friendsTab.enabled=TRUE;
+        groupsTab.enabled=TRUE;
+                
+        [UIView animateWithDuration:0.4 animations:^{
+            [wipeDataView setAlpha:0.0];
+            [postsViewer setAlpha:1.0];
+        }];
+    }
 }
 
-#pragma mark -
-#pragma mark Chat delegate
 
-- (void)newBuddyOnline:(NSString *)buddyName
+-(void)changeUserPassword
 {
-    NSLog(@"online buddy: %@",buddyName);
+    changePasswordFlag=1;
+    changeEmailFlag=0;
+    changePasswordConfirmAlert=[[UIAlertView alloc]initWithTitle:@"Login Password" message:@"Please enter your login password to proceed" delegate:self cancelButtonTitle:@"Cancel" otherButtonTitles:@"Proceed", nil];
+    changePasswordConfirmAlert.alertViewStyle=UIAlertViewStyleSecureTextInput;
+    [changePasswordConfirmAlert textFieldAtIndex:0].delegate=self;
+    [changePasswordConfirmAlert textFieldAtIndex:0].placeholder=@"Password";
+    [changePasswordConfirmAlert show];
+    [changePasswordConfirmAlert release];
 }
 
-- (void)buddyWentOffline:(NSString *)buddyName
+-(void)changeUserEmailAddress
 {
-	NSLog(@"offine buddy: %@",buddyName);
+    changeEmailFlag=1;
+    changePasswordFlag=0;
+    changeEmailConfirmAlert=[[UIAlertView alloc]initWithTitle:@"Login Password" message:@"Please enter your login password to proceed" delegate:self cancelButtonTitle:@"Cancel" otherButtonTitles:@"Proceed", nil];
+    changeEmailConfirmAlert.alertViewStyle=UIAlertViewStyleSecureTextInput;
+    [changeEmailConfirmAlert textFieldAtIndex:0].delegate=self;
+    [changeEmailConfirmAlert textFieldAtIndex:0].placeholder=@"Password";
+    [changeEmailConfirmAlert show];
+    [changeEmailConfirmAlert release];
 }
 
-- (void)didDisconnect
+-(void)wipeAllUserData
 {
-	NSLog(@"disconnected from xmpp");
+    UIAlertView *wipeAlert=[[UIAlertView alloc]initWithTitle:@"Erase your profile ?" message:@"Are you sure about erasing your profile ? This will delete all your data posted." delegate:self cancelButtonTitle:@"Cancel" otherButtonTitles:@"Proceed", nil];
+    [wipeAlert show];
+    [wipeAlert release];
+}
+
+
+
+#pragma mark alertview delegate
+
+- (void)alertView:(UIAlertView *)alertViewOld didDismissWithButtonIndex:(NSInteger)buttonIndex
+{
+    if(buttonIndex==1)
+    {
+        if([alertViewOld.title isEqualToString:@"Erase your profile ?"])
+        {
+            credentialAlert=[[UIAlertView alloc]initWithTitle:@"Erase profile-Login Password" message:@"Please enter your login password" delegate:self cancelButtonTitle:@"Cancel" otherButtonTitles:@"Ok", nil];
+            
+            credentialAlert.alertViewStyle=UIAlertViewStyleSecureTextInput;
+            [credentialAlert textFieldAtIndex:0].delegate=self;
+            [credentialAlert show];
+        }
+        else if([alertViewOld.title isEqualToString:@"Erase profile-Login Password"])
+        {            
+            passwordForWipeData=[[NSString alloc]init];
+            
+            passwordForWipeData=[[credentialAlert textFieldAtIndex:0].text retain];
+            
+            if(passwordForWipeData==NULL || [passwordForWipeData isEqualToString:@""])
+            {
+                UIAlertView *nullLoginPwdAlert=[[UIAlertView alloc]initWithTitle:@"Empty Password !" message:@"Your Login Password cannot be empty. Please try again." delegate:self cancelButtonTitle:@"OK" otherButtonTitles:nil, nil];
+                [nullLoginPwdAlert show];
+                [nullLoginPwdAlert release];
+            }
+            else
+            {
+                [postsViewer setUserInteractionEnabled:FALSE];
+                postBtn.enabled=FALSE;
+                friendsTab.enabled=FALSE;
+                groupsTab.enabled=FALSE;
+                connProgress.hidden=FALSE;
+                [connProgress startAnimating];
+                wipeDataView.hidden=TRUE;
+                
+                dispatch_async(dispatch_get_main_queue(), ^{
+                    [restObj wipeData:userNumber :passwordForWipeData :accessToken :@"wipeData"];
+                });
+                double delayInSeconds = 3.0;
+                dispatch_time_t popTime = dispatch_time(DISPATCH_TIME_NOW, (int64_t)(delayInSeconds * NSEC_PER_SEC));
+                dispatch_after(popTime, dispatch_get_main_queue(), ^(void){
+                    NSLog(@"receiving status of wipe data");
+                    retVal=[restObj returnValue];
+                    if(retVal==1)
+                    {
+                        NSLog(@"user data permanently erased !");
+                        UIAlertView *erasedAlert=[[UIAlertView alloc]initWithTitle:@"Erased" message:@"Your profile has been erased successfully" delegate:self cancelButtonTitle:@"Ok" otherButtonTitles:nil, nil];
+                        [erasedAlert show];
+                        [erasedAlert release];
+                        
+                        /*Set all user/group variables to NULL*/
+                        [self resetAllVariables];
+                        
+                        [postsViewer setUserInteractionEnabled:TRUE];
+                        if(groupNumber!=NULL)
+                        {
+                            postBtn.enabled=TRUE;
+                        }
+                        friendsTab.enabled=TRUE;
+                        groupsTab.enabled=TRUE;
+                        connProgress.hidden=TRUE;
+                        [connProgress stopAnimating];
+                        wipeDataView.hidden=FALSE;
+                        
+                        loginViewObj=[[loginViewController alloc]init];
+                        [self presentViewController:loginViewObj animated:YES completion:NULL];
+                    }
+                    else if (retVal==-1)
+                    {
+                        NSLog(@"Incorrect password !");
+                        UIAlertView *erasedAlert=[[UIAlertView alloc]initWithTitle:@"Password incorrect" message:@"Please enter your login password correctly" delegate:self cancelButtonTitle:@"Ok" otherButtonTitles:nil, nil];
+                        [erasedAlert show];
+                        [erasedAlert release];
+                        
+                        [postsViewer setUserInteractionEnabled:TRUE];
+                        if(groupNumber!=NULL)
+                        {
+                            postBtn.enabled=TRUE;
+                        }
+                        friendsTab.enabled=TRUE;
+                        groupsTab.enabled=TRUE;
+                        connProgress.hidden=TRUE;
+                        [connProgress stopAnimating];
+                        wipeDataView.hidden=FALSE;
+                    }
+                    else if (retVal==0)
+                    {
+                        double delayInSeconds = 3.0;
+                        dispatch_time_t popTime = dispatch_time(DISPATCH_TIME_NOW, (int64_t)(delayInSeconds * NSEC_PER_SEC));
+                        dispatch_after(popTime, dispatch_get_main_queue(), ^(void){
+                            NSLog(@"receiving status of wipe data");
+                            retVal=[restObj returnValue];
+                            if(retVal==1)
+                            {
+                                NSLog(@"user data permanently erased !");
+                                UIAlertView *erasedAlert=[[UIAlertView alloc]initWithTitle:@"Erased" message:@"Your profile has been erased successfully" delegate:self cancelButtonTitle:@"Ok" otherButtonTitles:nil, nil];
+                                [erasedAlert show];
+                                [erasedAlert release];
+                                
+                                /*Set all user/group variables to NULL*/
+                                [self resetAllVariables];
+                                
+                                [postsViewer setUserInteractionEnabled:TRUE];
+                                if(groupNumber!=NULL)
+                                {
+                                    postBtn.enabled=TRUE;
+                                }
+                                friendsTab.enabled=TRUE;
+                                groupsTab.enabled=TRUE;
+                                connProgress.hidden=TRUE;
+                                [connProgress stopAnimating];
+                                wipeDataView.hidden=FALSE;
+                                
+                                loginViewObj=[[loginViewController alloc]init];
+                                [self presentViewController:loginViewObj animated:YES completion:NULL];
+                            }
+                            else if (retVal==-1)
+                            {
+                                NSLog(@"Incorrect password !");
+                                UIAlertView *erasedAlert=[[UIAlertView alloc]initWithTitle:@"Password incorrect" message:@"Please enter your login password correctly" delegate:self cancelButtonTitle:@"Ok" otherButtonTitles:nil, nil];
+                                [erasedAlert show];
+                                [erasedAlert release];
+                                
+                                [postsViewer setUserInteractionEnabled:TRUE];
+                                if(groupNumber!=NULL)
+                                {
+                                    postBtn.enabled=TRUE;
+                                }
+                                friendsTab.enabled=TRUE;
+                                groupsTab.enabled=TRUE;
+                                connProgress.hidden=TRUE;
+                                [connProgress stopAnimating];
+                                wipeDataView.hidden=FALSE;
+                            }
+                            else if (retVal==0)
+                            {
+                                UIAlertView *connErrAlert=[[UIAlertView alloc]initWithTitle:@"Connection Error" message:@"Unable to contact server. Please try again." delegate:self cancelButtonTitle:@"Ok" otherButtonTitles:nil, nil];
+                                [connErrAlert show];
+                                [connErrAlert release];
+                                
+                                [postsViewer setUserInteractionEnabled:TRUE];
+                                if(groupNumber!=NULL)
+                                {
+                                    postBtn.enabled=TRUE;
+                                }
+                                friendsTab.enabled=TRUE;
+                                groupsTab.enabled=TRUE;
+                                connProgress.hidden=TRUE;
+                                [connProgress stopAnimating];
+                                wipeDataView.hidden=FALSE;
+                            }
+                            
+                        });
+                    }
+                });
+                
+                
+                [UIView animateWithDuration:0.4 animations:^{
+                    [wipeDataView setAlpha:0.0];
+                    [postsViewer setAlpha:1.0];
+                }];
+            }
+        }
+        else if([alertViewOld.title hasPrefix:@"New message from "])
+        {
+            NSLog(@"navigation stack init");
+            
+            userChatObj=[[userChatViewController alloc]init];
+            [self addChildViewController:userChatObj];
+            [self presentViewController:userChatObj animated:YES completion:nil];
+            NSLog(@"navigation stack ended");
+        }
+        else if([alertViewOld.title isEqualToString:@"Login Password"])
+        {
+            if(changePasswordFlag==1 && changeEmailFlag==0)
+            {
+                oldPassword=[[NSString alloc]init];
+                
+                oldPassword=[[changePasswordConfirmAlert textFieldAtIndex:0].text retain];
+                NSLog(@"old pwd: %@",oldPassword);
+                
+                if(oldPassword==NULL || [oldPassword isEqualToString:@""])
+                {
+                    UIAlertView *nullLoginPwdAlert=[[UIAlertView alloc]initWithTitle:@"Empty Password !" message:@"Your Login Password cannot be empty. Please try again." delegate:self cancelButtonTitle:@"OK" otherButtonTitles:nil, nil];
+                    [nullLoginPwdAlert show];
+                    [nullLoginPwdAlert release];
+                }
+                else
+                {
+                    if([oldPassword isEqualToString:userpwd])
+                    {
+                        changePasswordAlert=[[UIAlertView alloc]initWithTitle:@"Change Password" message:nil delegate:self cancelButtonTitle:@"Cancel" otherButtonTitles:@"Confirm", nil];
+                        changePasswordAlert.alertViewStyle=UIAlertViewStyleLoginAndPasswordInput;
+                        [changePasswordAlert textFieldAtIndex:0].delegate=self;
+                        [changePasswordAlert textFieldAtIndex:1].delegate=self;
+                        [changePasswordAlert textFieldAtIndex:0].secureTextEntry=YES;
+                        [changePasswordAlert textFieldAtIndex:0].placeholder=@"New Password";
+                        [changePasswordAlert textFieldAtIndex:1].placeholder=@"Re-type New Password";
+                        
+                        [changePasswordAlert show];
+                        [changePasswordAlert release];
+                    }
+                    else
+                    {
+                        UIAlertView *incorrectPasswordAlert=[[UIAlertView alloc]initWithTitle:@"Incorrect Password" message:@"The entered password does not match our records. Please try again." delegate:self cancelButtonTitle:@"Ok" otherButtonTitles:nil, nil];
+                        [incorrectPasswordAlert show];
+                        [incorrectPasswordAlert release];
+                    }
+                }
+            }
+            else if (changeEmailFlag==1 && changePasswordFlag==0)
+            {
+                oldPasswordForChangeEmail=[[NSString alloc]init];
+                
+                oldPasswordForChangeEmail=[[changeEmailConfirmAlert textFieldAtIndex:0].text retain];
+                NSLog(@"old pwd entered at change email: %@",oldPasswordForChangeEmail);
+                NSLog(@"actual login pwd: %@",userpwd);
+                
+                
+                if(oldPasswordForChangeEmail==NULL || [oldPasswordForChangeEmail isEqualToString:@""])
+                {
+                    UIAlertView *nullLoginPwdAlert=[[UIAlertView alloc]initWithTitle:@"Empty Password !" message:@"Your Login Password cannot be empty. Please try again." delegate:self cancelButtonTitle:@"OK" otherButtonTitles:nil, nil];
+                    [nullLoginPwdAlert show];
+                    [nullLoginPwdAlert release];
+                }
+                else
+                {
+                    if([oldPasswordForChangeEmail isEqualToString:userpwd])
+                    {
+                        changeEmailAlert=[[UIAlertView alloc]initWithTitle:@"Change Email Address" message:nil delegate:self cancelButtonTitle:@"Cancel" otherButtonTitles:@"Confirm", nil];
+                        changeEmailAlert.alertViewStyle=UIAlertViewStyleLoginAndPasswordInput;
+                        [changeEmailAlert textFieldAtIndex:0].delegate=self;
+                        [changeEmailAlert textFieldAtIndex:1].delegate=self;
+                        [changeEmailAlert textFieldAtIndex:1].secureTextEntry=FALSE;
+                        [changeEmailAlert textFieldAtIndex:0].placeholder=@"New Email Address";
+                        [changeEmailAlert textFieldAtIndex:1].placeholder=@"Re-type New Email Address";
+                        [changeEmailAlert textFieldAtIndex:0].keyboardType=UIKeyboardTypeEmailAddress;
+                        [changeEmailAlert textFieldAtIndex:1].keyboardType=UIKeyboardTypeEmailAddress;
+                        
+                        [changeEmailAlert show];
+                        [changeEmailAlert release];
+                    }
+                    else
+                    {
+                        UIAlertView *incorrectPasswordAlert=[[UIAlertView alloc]initWithTitle:@"Incorrect Password" message:@"The entered password does not match our records. Please try again." delegate:self cancelButtonTitle:@"Ok" otherButtonTitles:nil, nil];
+                        [incorrectPasswordAlert show];
+                        [incorrectPasswordAlert release];
+                    }
+                }
+            }
+        }
+       
+        else if ([alertViewOld.title isEqualToString:@"Change Password"])
+        {
+            newPassword=[[NSString alloc]init];
+            retypeNewPassword=[[NSString alloc]init];
+            
+            newPassword=[[changePasswordAlert textFieldAtIndex:0].text retain];
+            retypeNewPassword=[[changePasswordAlert textFieldAtIndex:1].text retain];
+            
+            NSLog(@"new pwd: %@",newPassword);
+            NSLog(@"retype new pwd: %@",retypeNewPassword);
+
+            if([newPassword isEqualToString:@""]||newPassword==NULL)
+            {
+                UIAlertView *emptyNewPasswordAlert=[[UIAlertView alloc]initWithTitle:@"Empty Password" message:@"Your new password cannot be empty" delegate:self cancelButtonTitle:@"OK" otherButtonTitles:nil, nil];
+                [emptyNewPasswordAlert show];
+                [emptyNewPasswordAlert release];
+            }
+            else
+            {
+                if([retypeNewPassword isEqualToString:@""]||retypeNewPassword==NULL)
+                {
+                    UIAlertView *emptyNewPasswordAlert=[[UIAlertView alloc]initWithTitle:@"Empty Password" message:@"Your new password cannot be empty" delegate:self cancelButtonTitle:@"OK" otherButtonTitles:nil, nil];
+                    [emptyNewPasswordAlert show];
+                    [emptyNewPasswordAlert release];
+                }
+                else
+                {
+                    if(![newPassword isEqualToString:retypeNewPassword])
+                    {
+                        UIAlertView *emptyNewPasswordAlert=[[UIAlertView alloc]initWithTitle:@"Password Mismatch !" message:@"Please re-enter your new password correctly." delegate:self cancelButtonTitle:@"OK" otherButtonTitles:nil, nil];
+                        [emptyNewPasswordAlert show];
+                        [emptyNewPasswordAlert release];
+                    }
+                    else
+                    {
+                        showWipeView=0;
+                        [postsViewer setUserInteractionEnabled:FALSE];
+                        postBtn.enabled=FALSE;
+                        friendsTab.enabled=FALSE;
+                        groupsTab.enabled=FALSE;
+                        connProgress.hidden=FALSE;
+                        [connProgress startAnimating];
+                        wipeDataView.hidden=TRUE;
+                        
+                        dispatch_async(dispatch_get_main_queue(), ^{
+                            [restObj changeUserPassword: userNumber :oldPassword :newPassword :accessToken :@"changeUserInfo"];
+                        });
+                        double delayInSeconds = 2.0;
+                        dispatch_time_t popTime = dispatch_time(DISPATCH_TIME_NOW, (int64_t)(delayInSeconds * NSEC_PER_SEC));
+                        dispatch_after(popTime, dispatch_get_main_queue(), ^(void){
+                            NSLog(@"receiving status of change password");
+                            retVal=[restObj returnValue];
+                            if(retVal==1)
+                            {
+                                NSLog(@"user password successfully changed !");
+                                UIAlertView *changePasswordSuccessAlert=[[UIAlertView alloc]initWithTitle:@"Password changed" message:@"Your login password has been changed successfully" delegate:self cancelButtonTitle:@"OK" otherButtonTitles:nil, nil];
+                                [changePasswordSuccessAlert show];
+                                [changePasswordSuccessAlert release];
+                                
+                                [postsViewer setUserInteractionEnabled:TRUE];
+                                if(groupNumber!=NULL)
+                                {
+                                    postBtn.enabled=TRUE;
+                                }
+                                friendsTab.enabled=TRUE;
+                                groupsTab.enabled=TRUE;
+                                connProgress.hidden=TRUE;
+                                [connProgress stopAnimating];
+                                wipeDataView.hidden=FALSE;
+                            }
+                            else if (retVal==-1)
+                            {
+                                NSLog(@"old password incorrect password !");
+                                UIAlertView *changePasswordFailAlert=[[UIAlertView alloc]initWithTitle:@"Password incorrect" message:@"Please enter your current login password correctly" delegate:self cancelButtonTitle:@"Ok" otherButtonTitles:nil, nil];
+                                [changePasswordFailAlert show];
+                                [changePasswordFailAlert release];
+                                
+                                [postsViewer setUserInteractionEnabled:TRUE];
+                                if(groupNumber!=NULL)
+                                {
+                                    postBtn.enabled=TRUE;
+                                }
+                                friendsTab.enabled=TRUE;
+                                groupsTab.enabled=TRUE;
+                                connProgress.hidden=TRUE;
+                                [connProgress stopAnimating];
+                                wipeDataView.hidden=FALSE;
+                            }
+                            else if (retVal==0)
+                            {
+                                double delayInSeconds = 4.0;
+                                dispatch_time_t popTime = dispatch_time(DISPATCH_TIME_NOW, (int64_t)(delayInSeconds * NSEC_PER_SEC));
+                                dispatch_after(popTime, dispatch_get_main_queue(), ^(void){
+                                    NSLog(@"receiving status of change password");
+                                    retVal=[restObj returnValue];
+                                    if(retVal==1)
+                                    {
+                                        NSLog(@"user password successfully changed !");
+                                        UIAlertView *changePasswordSuccessAlert=[[UIAlertView alloc]initWithTitle:@"Password changed" message:@"Your login password has been changed successfully" delegate:self cancelButtonTitle:@"OK" otherButtonTitles:nil, nil];
+                                        [changePasswordSuccessAlert show];
+                                        [changePasswordSuccessAlert release];
+                                        
+                                        [postsViewer setUserInteractionEnabled:TRUE];
+                                        if(groupNumber!=NULL)
+                                        {
+                                            postBtn.enabled=TRUE;
+                                        }
+                                        friendsTab.enabled=TRUE;
+                                        groupsTab.enabled=TRUE;
+                                        connProgress.hidden=TRUE;
+                                        [connProgress stopAnimating];
+                                        wipeDataView.hidden=FALSE;
+                                    }
+                                    else if (retVal==-1)
+                                    {
+                                        NSLog(@"old password incorrect password !");
+                                        UIAlertView *changePasswordFailAlert=[[UIAlertView alloc]initWithTitle:@"Password incorrect" message:@"Please enter your current login password correctly" delegate:self cancelButtonTitle:@"Ok" otherButtonTitles:nil, nil];
+                                        [changePasswordFailAlert show];
+                                        [changePasswordFailAlert release];
+                                        
+                                        [postsViewer setUserInteractionEnabled:TRUE];
+                                        if(groupNumber!=NULL)
+                                        {
+                                            postBtn.enabled=TRUE;
+                                        }
+                                        friendsTab.enabled=TRUE;
+                                        groupsTab.enabled=TRUE;
+                                        connProgress.hidden=TRUE;
+                                        [connProgress stopAnimating];
+                                        wipeDataView.hidden=FALSE;
+                                    }
+                                    else if (retVal==0)
+                                    {
+                                        UIAlertView *connErrAlert=[[UIAlertView alloc]initWithTitle:@"Connection Error" message:@"Unable to contact server. Please try again." delegate:self cancelButtonTitle:@"Ok" otherButtonTitles:nil, nil];
+                                        [connErrAlert show];
+                                        [connErrAlert release];
+                                        
+                                        [postsViewer setUserInteractionEnabled:TRUE];
+                                        if(groupNumber!=NULL)
+                                        {
+                                            postBtn.enabled=TRUE;
+                                        }
+                                        friendsTab.enabled=TRUE;
+                                        groupsTab.enabled=TRUE;
+                                        connProgress.hidden=TRUE;
+                                        [connProgress stopAnimating];
+                                        wipeDataView.hidden=FALSE;
+                                    }
+                                    
+                                });
+                            }
+                            
+                        });
+                        
+                        [UIView animateWithDuration:0.4 animations:^{
+                            [wipeDataView setAlpha:0.0];
+                            [postsViewer setAlpha:1.0];
+                        }];
+                    }
+                }
+            }
+        }
+        else if([alertViewOld.title isEqualToString:@"Change Email Address"])
+        {            
+            newEmailAddress=[[NSString alloc]init];
+            retypeNewEmailAddress=[[NSString alloc]init];
+            
+            newEmailAddress=[[changeEmailAlert textFieldAtIndex:0].text retain];
+            retypeNewEmailAddress=[[changeEmailAlert textFieldAtIndex:1].text retain];
+            NSLog(@"new email address: %@",newEmailAddress);
+            NSLog(@"retype new email address: %@",retypeNewEmailAddress);
+            
+            if([newEmailAddress isEqualToString:@""]||newEmailAddress==NULL)
+            {
+                UIAlertView *emptyNewEmailAddressAlert=[[UIAlertView alloc]initWithTitle:@"Empty Email Address" message:@"Your new email address cannot be empty" delegate:self cancelButtonTitle:@"OK" otherButtonTitles:nil, nil];
+                [emptyNewEmailAddressAlert show];
+                [emptyNewEmailAddressAlert release];
+            }
+            else
+            {
+                if([retypeNewEmailAddress isEqualToString:@""]||retypeNewEmailAddress==NULL)
+                {
+                    UIAlertView *emptyNewEmailAddressAlert=[[UIAlertView alloc]initWithTitle:@"Empty Email address" message:@"Your new email address cannot be empty" delegate:self cancelButtonTitle:@"OK" otherButtonTitles:nil, nil];
+                    [emptyNewEmailAddressAlert show];
+                    [emptyNewEmailAddressAlert release];
+                }
+                else
+                {
+                    if(![newEmailAddress isEqualToString:retypeNewEmailAddress])
+                    {
+                        UIAlertView *incorrectNewEmailAddressAlert=[[UIAlertView alloc]initWithTitle:@"Email Address Mismatch !" message:@"Please re-enter your new email address correctly." delegate:self cancelButtonTitle:@"OK" otherButtonTitles:nil, nil];
+                        [incorrectNewEmailAddressAlert show];
+                        [incorrectNewEmailAddressAlert release];
+                    }
+                    else
+                    {
+                        showWipeView=0;
+                        [postsViewer setUserInteractionEnabled:FALSE];
+                        postBtn.enabled=FALSE;
+                        friendsTab.enabled=FALSE;
+                        groupsTab.enabled=FALSE;
+                        connProgress.hidden=FALSE;
+                        [connProgress startAnimating];
+                        wipeDataView.hidden=TRUE;
+                        
+                        dispatch_async(dispatch_get_main_queue(), ^{
+                            [restObj changeUserEmailAddress: userNumber :oldPasswordForChangeEmail :newEmailAddress :accessToken :@"changeUserInfo"];
+                        });
+                        double delayInSeconds = 2.0;
+                        dispatch_time_t popTime = dispatch_time(DISPATCH_TIME_NOW, (int64_t)(delayInSeconds * NSEC_PER_SEC));
+                        dispatch_after(popTime, dispatch_get_main_queue(), ^(void){
+                            NSLog(@"receiving status of change email address");
+                            retVal=[restObj returnValue];
+                            if(retVal==1)
+                            {
+                                NSLog(@"user email address successfully changed !");
+                                UIAlertView *changeEmailSuccessAlert=[[UIAlertView alloc]initWithTitle:@"Email Address changed" message:@"Your Email address has been changed successfully" delegate:self cancelButtonTitle:@"OK" otherButtonTitles:nil, nil];
+                                [changeEmailSuccessAlert show];
+                                [changeEmailSuccessAlert release];
+                                
+                                [postsViewer setUserInteractionEnabled:TRUE];
+                                if(groupNumber!=NULL)
+                                {
+                                    postBtn.enabled=TRUE;
+                                }
+                                friendsTab.enabled=TRUE;
+                                groupsTab.enabled=TRUE;
+                                connProgress.hidden=TRUE;
+                                [connProgress stopAnimating];
+                                wipeDataView.hidden=FALSE;
+                            }
+                            else if (retVal==-1)
+                            {
+                                NSLog(@"password incorrect !");
+                                UIAlertView *changeEmailFailAlert=[[UIAlertView alloc]initWithTitle:@"Password incorrect" message:@"Please enter your current login password correctly" delegate:self cancelButtonTitle:@"Ok" otherButtonTitles:nil, nil];
+                                [changeEmailFailAlert show];
+                                [changeEmailFailAlert release];
+                                
+                                [postsViewer setUserInteractionEnabled:TRUE];
+                                if(groupNumber!=NULL)
+                                {
+                                    postBtn.enabled=TRUE;
+                                }
+                                friendsTab.enabled=TRUE;
+                                groupsTab.enabled=TRUE;
+                                connProgress.hidden=TRUE;
+                                [connProgress stopAnimating];
+                                wipeDataView.hidden=FALSE;
+                            }
+                            else if (retVal==0)
+                            {
+                                double delayInSeconds = 4.0;
+                                dispatch_time_t popTime = dispatch_time(DISPATCH_TIME_NOW, (int64_t)(delayInSeconds * NSEC_PER_SEC));
+                                dispatch_after(popTime, dispatch_get_main_queue(), ^(void){
+                                    NSLog(@"receiving status of change email address");
+                                    retVal=[restObj returnValue];
+                                    if(retVal==1)
+                                    {
+                                        NSLog(@"user email address successfully changed !");
+                                        UIAlertView *changeEmailSuccessAlert=[[UIAlertView alloc]initWithTitle:@"Email Address changed" message:@"Your Email address has been changed successfully" delegate:self cancelButtonTitle:@"OK" otherButtonTitles:nil, nil];
+                                        [changeEmailSuccessAlert show];
+                                        [changeEmailSuccessAlert release];
+                                        
+                                        [postsViewer setUserInteractionEnabled:TRUE];
+                                        if(groupNumber!=NULL)
+                                        {
+                                            postBtn.enabled=TRUE;
+                                        }
+                                        friendsTab.enabled=TRUE;
+                                        groupsTab.enabled=TRUE;
+                                        connProgress.hidden=TRUE;
+                                        [connProgress stopAnimating];
+                                        wipeDataView.hidden=FALSE;
+                                    }
+                                    else if (retVal==-1)
+                                    {
+                                        NSLog(@"password incorrect !");
+                                        UIAlertView *changeEmailFailAlert=[[UIAlertView alloc]initWithTitle:@"Password incorrect" message:@"Please enter your current login password correctly" delegate:self cancelButtonTitle:@"Ok" otherButtonTitles:nil, nil];
+                                        [changeEmailFailAlert show];
+                                        [changeEmailFailAlert release];
+                                        
+                                        [postsViewer setUserInteractionEnabled:TRUE];
+                                        if(groupNumber!=NULL)
+                                        {
+                                            postBtn.enabled=TRUE;
+                                        }
+                                        friendsTab.enabled=TRUE;
+                                        groupsTab.enabled=TRUE;
+                                        connProgress.hidden=TRUE;
+                                        [connProgress stopAnimating];
+                                        wipeDataView.hidden=FALSE;
+                                    }
+                                    else if (retVal==0)
+                                    {
+                                        UIAlertView *connErrAlert=[[UIAlertView alloc]initWithTitle:@"Connection Error" message:@"Unable to contact server. Please try again." delegate:self cancelButtonTitle:@"Ok" otherButtonTitles:nil, nil];
+                                        [connErrAlert show];
+                                        [connErrAlert release];
+                                        
+                                        [postsViewer setUserInteractionEnabled:TRUE];
+                                        if(groupNumber!=NULL)
+                                        {
+                                            postBtn.enabled=TRUE;
+                                        }
+                                        friendsTab.enabled=TRUE;
+                                        groupsTab.enabled=TRUE;
+                                        connProgress.hidden=TRUE;
+                                        [connProgress stopAnimating];
+                                        wipeDataView.hidden=FALSE;
+                                    }
+                                    
+                                });
+                            }
+                            
+                        });
+                        
+                        [UIView animateWithDuration:0.4 animations:^{
+                            [wipeDataView setAlpha:0.0];
+                            [postsViewer setAlpha:1.0];
+                        }];
+                    }
+                }
+            }
+        }
+    }
+    else if (buttonIndex==0)
+    {
+        if([alertViewOld.title isEqualToString:@"Erase your profile ?"])
+        {
+            showWipeView=0;
+            
+            [postsViewer setUserInteractionEnabled:TRUE];
+            if(groupNumber!=NULL)
+            {
+                postBtn.enabled=TRUE;
+            }
+            friendsTab.enabled=TRUE;
+            groupsTab.enabled=TRUE;
+            
+            [UIView animateWithDuration:0.4 animations:^{
+                [wipeDataView setAlpha:0.0];
+                [postsViewer setAlpha:1.0];
+            }];
+        }
+        else if([alertViewOld.title isEqualToString:@"Login Password"])
+        {
+            showWipeView=0;
+            
+            [postsViewer setUserInteractionEnabled:TRUE];
+            if(groupNumber!=NULL)
+            {
+                postBtn.enabled=TRUE;
+            }
+            friendsTab.enabled=TRUE;
+            groupsTab.enabled=TRUE;
+            
+            [UIView animateWithDuration:0.4 animations:^{
+                [wipeDataView setAlpha:0.0];
+                [postsViewer setAlpha:1.0];
+            }];
+        }
+    }
+}
+
+
+- (void)alertView:(UIAlertView *)alertViewOld clickedButtonAtIndex:(NSInteger)buttonIndex
+{
+    NSString *title = [alertViewOld buttonTitleAtIndex:buttonIndex];
+    if([title isEqualToString:@"Show"])
+    {
+        NSLog(@"navigation stack init");
+        UINavigationController *navController=(UINavigationController *)self.presentedViewController;
+        
+        userChatObj=[[userChatViewController alloc]initWithNibName:nil bundle:nil];
+        [navController.visibleViewController.navigationController pushViewController:userChatObj animated:YES];
+    }
+}
+
+/*This function is called when a user wipes his data successfully*/
+-(void)resetAllVariables
+{
+    username=NULL;
+    userNumber=NULL;
+    groupName=NULL;
+    groupNumber=NULL;
+    accessToken=NULL;
+    appearCheck=1;
+    loginSuccessSignal=0;
 }
 
 - (void)didReceiveMemoryWarning

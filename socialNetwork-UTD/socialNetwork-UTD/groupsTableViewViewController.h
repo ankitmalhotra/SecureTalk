@@ -11,6 +11,7 @@
 #import "messengerViewController.h"
 #import "newPostViewController.h"
 #import "messengerRESTclient.h"
+#import "loginViewController.h"
 
 @class messengerViewController;
 @class messengerRESTclient;
@@ -32,12 +33,14 @@
     //dispatch_queue_t fetchOtherGroupsQueue;
 
     /*Custom UI elements for "New Group" view*/
-    UIView *alertView;
+    UIView *newGroupAlertView;
     UITextField *groupNameField;
+    UIAlertView *groupPasswordAlert;
     UITextField *groupPasswordField;
     UITextField *retypePasswordField;
     UISwitch *securedSwitch;
     UIButton *createBtn;
+    UIButton *lockButton;
     UIButton *closeBtn;
     UIRefreshControl *refreshCntl;
         
@@ -49,9 +52,20 @@
     messengerViewController *mainViewObj;
     messengerRESTclient *restObj;
     newPostViewController *newPostObj;
+    loginViewController *loginViewObj;
 }
 
--(IBAction)backToMain;
+@property(nonatomic,retain) IBOutlet UINavigationBar *navBar;
+@property(nonatomic,retain) IBOutlet UITableView *tabVw;
+@property(nonatomic,retain) IBOutlet UIBarButtonItem *addGrp;
+@property(nonatomic,retain) IBOutlet UIBarButtonItem *backToMain;
+@property(nonatomic,retain) IBOutlet UITabBar *groupsTab;
+@property(nonatomic,retain) IBOutlet UITabBarItem *myGroups;
+@property(nonatomic,retain) IBOutlet UITabBarItem *allGroups;
+@property(nonatomic,retain) IBOutlet UIActivityIndicatorView *connProgress;
+
+
+-(IBAction)backToMainView;
 -(IBAction)createGroup;
 -(void)invokeCreate;
 -(void)closeView;

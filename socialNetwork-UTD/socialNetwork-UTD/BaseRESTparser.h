@@ -18,7 +18,7 @@
 @class messengerRESTclient;
 @class findFriendViewController;
 
-@interface BaseRESTparser : NSObject
+@interface BaseRESTparser : NSObject<NSXMLParserDelegate>
 {
     NSMutableArray	*_contentsOfElement;	// Contents of the current element
     messengerViewController *mainViewPtr;
@@ -33,7 +33,7 @@
 - (void) parseDocument:(NSData *)data :(NSString *)endPoint ;
 - (void) clearContentsOfElement ;
 - (void)callMain:(NSMutableArray *)mainContents;
-- (NSArray *)dataExposer;
 - (int)statusSignal;
+
 
 @end

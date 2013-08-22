@@ -19,13 +19,14 @@
 @interface signupUserViewController : UIViewController
 {
     IBOutlet UIView *signupView;
-    IBOutlet UIButton *goBtn;
+    IBOutlet UIButton *signupBtn;
     IBOutlet UIBarButtonItem *backToLoginBtn;
     IBOutlet UITextField *dispNameField;
     IBOutlet UITextField *realNameField;
     IBOutlet UITextField *newPasswordField;
     IBOutlet UITextField *retypePasswordField;
     IBOutlet UITextField *emailField;
+    IBOutlet UIActivityIndicatorView *connProgress;
     
     NSString *userID;
     NSString *userName;
@@ -41,7 +42,6 @@
     messengerRESTclient *restObj;
     messengerAppDelegate *appDelegateObj;
     messengerViewController *mainViewObj;
-    
 }
 
 -(IBAction)returnKeyboard:(id)sender;

@@ -22,8 +22,12 @@
     IBOutlet UILabel *headingLabel;
     IBOutlet UIButton *locationUpdate;
     IBOutlet UINavigationBar *navBar;
+    IBOutlet UIActivityIndicatorView *connProgress;
+    IBOutlet UILabel *charactersLabel;
 
     int retVal;
+    int txtLength;
+    NSString *lblString;
     
     messengerRESTclient *restObj;
     messengerViewController *mainViewObj;

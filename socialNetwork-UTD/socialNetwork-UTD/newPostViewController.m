@@ -33,11 +33,17 @@ int locationCheck=0;
     [super viewDidLoad];
     restObj=[[messengerRESTclient alloc]init];
     mainViewObj=[[messengerViewController alloc]init];
+    lblString=[[NSString alloc]init];
     
     UIColor *bckgImg = [[UIColor alloc]initWithPatternImage:[UIImage imageNamed:@"texture08.jpg"]];
     [newPostView setBackgroundColor:bckgImg];
     
     [messageVw becomeFirstResponder];
+    
+    locationCheck=0;
+    
+    connProgress.hidden=TRUE;
+    connProgress.transform=CGAffineTransformMakeScale(1.5, 1.5);
     
     /*Init loc-update to get the latest coordinates*/
     [mainViewObj initLocUpdate];
@@ -45,6 +51,8 @@ int locationCheck=0;
 
 -(void)viewDidAppear:(BOOL)animated
 {
+    locationCheck=0;
+
     NSLog(@"testing for username: %@",localUserId);
     NSString *initText=[[NSString alloc]initWithString:@"@"];
     initText=[initText stringByAppendingString:localUserId];
@@ -67,12 +75,28 @@ int locationCheck=0;
     [self dismissViewControllerAnimated:YES completion:NULL];
 }
 
+
+#pragma-mark TextView Delegates
+
+- (void)textViewDidChange:(UITextView *)textView
+{
+    NSLog(@"len:%d",textView.text.length);
+    txtLength=textView.text.length;
+    lblString=[NSString stringWithFormat:@"%i",210-txtLength];
+    if(txtLength>200)
+    {
+        charactersLabel.textColor=[UIColor redColor];
+    }
+    charactersLabel.text=lblString;
+}
+
 -(IBAction)createNewPost
 {
     postButton.enabled=FALSE;
     messageVw.editable=FALSE;
     cancelButton.enabled=FALSE;
-    messageVw.userInteractionEnabled=FALSE;
+    connProgress.hidden=FALSE;
+    [connProgress startAnimating];
     
     NSString *messageData;
     messageData=messageVw.text;
@@ -81,7 +105,7 @@ int locationCheck=0;
     [self setUserGroup];
     NSLog(@"received: %@",localGrpName);
     
-    BOOL validLocationCheck= (![streetAddress isEqualToString:@""] && streetAddress!=NULL && ![city isEqualToString:@""] && city!=NULL && ![state isEqualToString:@""] && state!=NULL);
+    BOOL validLocationCheck= (![[streetAddress retain] isEqualToString:@""] && [streetAddress retain]!=NULL && ![city isEqualToString:@""] && city!=NULL && ![state isEqualToString:@""] && state!=NULL);
     if(![messageData isEqualToString: @""])
     {
         if(locationCheck==1)
@@ -90,70 +114,157 @@ int locationCheck=0;
             {
                 messageData=[messageData stringByAppendingString:@"\n\n"];
                 messageData=[messageData stringByAppendingString:@"near "];
-                messageData=[messageData stringByAppendingString:streetAddress];
+                messageData=[messageData stringByAppendingString:[streetAddress retain]];
                 messageData=[messageData stringByAppendingString:@", "];
                 messageData=[messageData stringByAppendingString:city];
                 messageData=[messageData stringByAppendingString:@", "];
                 messageData=[messageData stringByAppendingString:state];
             }
         }
-        /*Place call to server with new post data & user,group,coord details*/
-        [restObj createNewPost:localUserNumber :localGrpNumber :messageData :_locationLat :_locationLong :localAccessToken :@"postMessage"];
-        double delayInSeconds = 2.3;
-        dispatch_time_t popTime = dispatch_time(DISPATCH_TIME_NOW, (int64_t)(delayInSeconds * NSEC_PER_SEC));
-        dispatch_after(popTime, dispatch_get_main_queue(), ^(void){
-            NSLog(@"calling for status from server..");
-            retVal=[restObj returnValue];
-            NSLog(@"status received:%d",retVal);
-            if(retVal==1)
-            {
-                [mainViewObj clearBufferList];
-                [mainViewObj clearAllPosts];
-                
-                /*Call to main to update table view for new post*/
-                [mainViewObj showPostData:localGrpName];
-                [mainViewObj setPostsRefreshSignal];
-
-                /*Call encryption routine to encrypt the message*/
-                [secureMessageRSA encryptMessage:messageData];
-                [secureMessageRSA decryptMessage];
-                
-                UIAlertView *createdAlert=[[UIAlertView alloc]initWithTitle:@"Success" message:[NSString stringWithFormat:@"Message Successfully posted"] delegate:self cancelButtonTitle:@"OK" otherButtonTitles:nil, nil];
-                [createdAlert show];
-                [createdAlert release];
-                [self dismissViewControllerAnimated:YES completion:NULL];
-            }
-            else if (retVal==0)
-            {
-                UIAlertView *connNullAlert=[[UIAlertView alloc]initWithTitle:@"Connection Error" message:@"Unable to contact server" delegate:nil cancelButtonTitle:@"Ok" otherButtonTitles:nil, nil];
-                [connNullAlert show];
-                [connNullAlert release];
-                postButton.enabled=TRUE;
-                cancelButton.enabled=TRUE;
-                messageVw.editable=TRUE;
-                messageVw.userInteractionEnabled=TRUE;
-            }
-            else if(retVal==-1)
-            {
-                UIAlertView *createdAlert=[[UIAlertView alloc]initWithTitle:@"Failed" message:[NSString stringWithFormat:@"New Message could not be posted"] delegate:self cancelButtonTitle:@"OK" otherButtonTitles:nil, nil];
-                [createdAlert show];
-                [createdAlert release];
-                postButton.enabled=TRUE;
-                cancelButton.enabled=TRUE;
-                messageVw.editable=TRUE;
-                messageVw.userInteractionEnabled=TRUE;
-            }
-            else if(retVal==43)
-            {
-                UIAlertView *duplicateMsgAlert=[[UIAlertView alloc]initWithTitle:@"Failed" message:[NSString stringWithFormat:@"You already posted this message a while ago !"] delegate:self cancelButtonTitle:@"OK" otherButtonTitles:nil, nil];
-                [duplicateMsgAlert show];
-                [duplicateMsgAlert release];
-                postButton.enabled=TRUE;
-                cancelButton.enabled=TRUE;
-                messageVw.editable=TRUE;
-                messageVw.userInteractionEnabled=TRUE;
-            }
-        });
+        
+        if(txtLength>210)
+        {
+            UIAlertView *limitExceedAlert=[[UIAlertView alloc]initWithTitle:@"Off Limits!" message:@"Your message is too long to be posted." delegate:self cancelButtonTitle:nil otherButtonTitles:@"Ok", nil];
+            [limitExceedAlert show];
+            [limitExceedAlert release];
+            
+            postButton.enabled=TRUE;
+            cancelButton.enabled=TRUE;
+            messageVw.editable=TRUE;
+            messageVw.userInteractionEnabled=TRUE;
+            connProgress.hidden=TRUE;
+            [connProgress stopAnimating];
+        }
+        else
+        {
+            messageVw.editable=FALSE;
+            messageVw.userInteractionEnabled=FALSE;
+            
+            dispatch_async(dispatch_get_main_queue(), ^{
+                /*Place call to server with new post data & user,group,coord details*/
+                [restObj createNewPost:localUserNumber :localGrpNumber :messageData :_locationLat :_locationLong :localAccessToken :@"postMessage"];
+            });
+            
+            double delayInSeconds = 3.0;
+            dispatch_time_t popTime = dispatch_time(DISPATCH_TIME_NOW, (int64_t)(delayInSeconds * NSEC_PER_SEC));
+            dispatch_after(popTime, dispatch_get_main_queue(), ^(void){
+                NSLog(@"calling for status from server..");
+                retVal=[restObj returnValue];
+                NSLog(@"status received:%d",retVal);
+                if(retVal==1)
+                {
+                    connProgress.hidden=TRUE;
+                    [connProgress stopAnimating];
+                    
+                    [mainViewObj clearBufferList];
+                    [mainViewObj clearAllPosts];
+                    
+                    /*Call to main to update table view for new post*/
+                    [mainViewObj showPostData:localGrpName];
+                    [mainViewObj setPostsRefreshSignal];
+                    
+                    /*Call encryption routine to encrypt the message*/
+                    [secureMessageRSA encryptMessage:messageData];
+                    [secureMessageRSA decryptMessage];
+                    
+                    UIAlertView *createdAlert=[[UIAlertView alloc]initWithTitle:@"Success" message:[NSString stringWithFormat:@"Message Successfully posted"] delegate:self cancelButtonTitle:@"OK" otherButtonTitles:nil, nil];
+                    [createdAlert show];
+                    [createdAlert release];
+                    [self dismissViewControllerAnimated:YES completion:NULL];
+                }
+                else if (retVal==0)
+                {
+                    double delayInSeconds = 4.0;
+                    dispatch_time_t popTime = dispatch_time(DISPATCH_TIME_NOW, (int64_t)(delayInSeconds * NSEC_PER_SEC));
+                    dispatch_after(popTime, dispatch_get_main_queue(), ^(void){
+                        NSLog(@"calling for status from server..");
+                        retVal=[restObj returnValue];
+                        NSLog(@"status received:%d",retVal);
+                        if(retVal==1)
+                        {
+                            connProgress.hidden=TRUE;
+                            [connProgress stopAnimating];
+                            
+                            [mainViewObj clearBufferList];
+                            [mainViewObj clearAllPosts];
+                            
+                            /*Call to main to update table view for new post*/
+                            [mainViewObj showPostData:localGrpName];
+                            [mainViewObj setPostsRefreshSignal];
+                            
+                            /*Call encryption routine to encrypt the message*/
+                            [secureMessageRSA encryptMessage:messageData];
+                            [secureMessageRSA decryptMessage];
+                            
+                            UIAlertView *createdAlert=[[UIAlertView alloc]initWithTitle:@"Success" message:[NSString stringWithFormat:@"Message Successfully posted"] delegate:self cancelButtonTitle:@"OK" otherButtonTitles:nil, nil];
+                            [createdAlert show];
+                            [createdAlert release];
+                            [self dismissViewControllerAnimated:YES completion:NULL];
+                        }
+                        else if (retVal==0)
+                        {
+                            UIAlertView *connNullAlert=[[UIAlertView alloc]initWithTitle:@"Connection Error" message:@"Unable to contact server. Please try again." delegate:nil cancelButtonTitle:@"Ok" otherButtonTitles:nil, nil];
+                            [connNullAlert show];
+                            [connNullAlert release];
+                            postButton.enabled=TRUE;
+                            cancelButton.enabled=TRUE;
+                            messageVw.editable=TRUE;
+                            messageVw.userInteractionEnabled=TRUE;
+                            connProgress.hidden=TRUE;
+                            [connProgress stopAnimating];
+                        }
+                        else if(retVal==-1)
+                        {
+                            UIAlertView *createdAlert=[[UIAlertView alloc]initWithTitle:@"Failed" message:[NSString stringWithFormat:@"New Message could not be posted. Please try again"] delegate:self cancelButtonTitle:@"OK" otherButtonTitles:nil, nil];
+                            [createdAlert show];
+                            [createdAlert release];
+                            postButton.enabled=TRUE;
+                            cancelButton.enabled=TRUE;
+                            messageVw.editable=TRUE;
+                            messageVw.userInteractionEnabled=TRUE;
+                            connProgress.hidden=TRUE;
+                            [connProgress stopAnimating];
+                        }
+                        else if(retVal==43)
+                        {
+                            UIAlertView *duplicateMsgAlert=[[UIAlertView alloc]initWithTitle:@"Failed" message:[NSString stringWithFormat:@"You already posted this message a while ago ! Please check back."] delegate:self cancelButtonTitle:@"OK" otherButtonTitles:nil, nil];
+                            [duplicateMsgAlert show];
+                            [duplicateMsgAlert release];
+                            postButton.enabled=TRUE;
+                            cancelButton.enabled=TRUE;
+                            messageVw.editable=TRUE;
+                            messageVw.userInteractionEnabled=TRUE;
+                            connProgress.hidden=TRUE;
+                            [connProgress stopAnimating];
+                        }
+                    });
+                }
+                else if(retVal==-1)
+                {
+                    UIAlertView *createdAlert=[[UIAlertView alloc]initWithTitle:@"Failed" message:[NSString stringWithFormat:@"New Message could not be posted. Please try again"] delegate:self cancelButtonTitle:@"OK" otherButtonTitles:nil, nil];
+                    [createdAlert show];
+                    [createdAlert release];
+                    postButton.enabled=TRUE;
+                    cancelButton.enabled=TRUE;
+                    messageVw.editable=TRUE;
+                    messageVw.userInteractionEnabled=TRUE;
+                    connProgress.hidden=TRUE;
+                    [connProgress stopAnimating];
+                }
+                else if(retVal==43)
+                {
+                    UIAlertView *duplicateMsgAlert=[[UIAlertView alloc]initWithTitle:@"Failed" message:[NSString stringWithFormat:@"You already posted this message a while ago ! Please check back."] delegate:self cancelButtonTitle:@"OK" otherButtonTitles:nil, nil];
+                    [duplicateMsgAlert show];
+                    [duplicateMsgAlert release];
+                    postButton.enabled=TRUE;
+                    cancelButton.enabled=TRUE;
+                    messageVw.editable=TRUE;
+                    messageVw.userInteractionEnabled=TRUE;
+                    connProgress.hidden=TRUE;
+                    [connProgress stopAnimating];
+                }
+            });
+        }
     }
     else
     {
@@ -164,6 +275,8 @@ int locationCheck=0;
         cancelButton.enabled=TRUE;
         messageVw.editable=TRUE;
         messageVw.userInteractionEnabled=TRUE;
+        connProgress.hidden=TRUE;
+        [connProgress stopAnimating];
     }
 }
 
@@ -175,23 +288,30 @@ int locationCheck=0;
         UIImage *bckgImg = [UIImage imageNamed:@"loc-on.jpg"];
         [locationUpdate setImage:bckgImg forState:UIControlStateNormal];
         
-        /*Reverse Geo-coding*/
-        NSOperationQueue *geoLocQueue=[NSOperationQueue new];
-        SEL methodSelector=@selector(getGeoCoords::);
-        NSMethodSignature *methodSignature=[self methodSignatureForSelector:methodSelector];
-        NSInvocation *methodInvocation=[NSInvocation invocationWithMethodSignature:methodSignature];
-        [methodInvocation setTarget:self];
-        [methodInvocation setSelector:methodSelector];
+        /*Call to fetch current coords*/
+        [mainViewObj initLocUpdate];
         
-        [methodInvocation setArgument:&_locationLat atIndex:2];
-        [methodInvocation setArgument:&_locationLong atIndex:3];
-        [methodInvocation retainArguments];
-        
-        NSInvocationOperation *invocationOperation=[[NSInvocationOperation alloc]initWithInvocation:methodInvocation];
-        [geoLocQueue addOperation:invocationOperation];
-        
-        [invocationOperation release];
-        [geoLocQueue release];
+        double delayInSeconds = 0.3;
+        dispatch_time_t popTime = dispatch_time(DISPATCH_TIME_NOW, (int64_t)(delayInSeconds * NSEC_PER_SEC));
+        dispatch_after(popTime, dispatch_get_main_queue(), ^(void){
+            /*Reverse Geo-coding*/
+            NSOperationQueue *geoLocQueue=[NSOperationQueue new];
+            SEL methodSelector=@selector(getGeoCoords::);
+            NSMethodSignature *methodSignature=[self methodSignatureForSelector:methodSelector];
+            NSInvocation *methodInvocation=[NSInvocation invocationWithMethodSignature:methodSignature];
+            [methodInvocation setTarget:self];
+            [methodInvocation setSelector:methodSelector];
+            
+            [methodInvocation setArgument:&_locationLat atIndex:2];
+            [methodInvocation setArgument:&_locationLong atIndex:3];
+            [methodInvocation retainArguments];
+            
+            NSInvocationOperation *invocationOperation=[[NSInvocationOperation alloc]initWithInvocation:methodInvocation];
+            [geoLocQueue addOperation:invocationOperation];
+            
+            [invocationOperation release];
+            [geoLocQueue release];
+        });
     }
     else
     {
@@ -230,6 +350,31 @@ int locationCheck=0;
             city=[locationDictionary objectForKey:(NSString *)kABPersonAddressCityKey];
             state=[locationDictionary objectForKey:(NSString *)kABPersonAddressStateKey];
             zip=[locationDictionary objectForKey:(NSString *)kABPersonAddressZIPKey];
+            
+            /*Detect for "En-Dash" unicode character & replace it 
+              with a "-"
+             */
+            
+            //streetAddress=@"2520–2524 Rutford Ave, 2510–2514, Richardson, Texas";
+
+            for(int k=0;k<[streetAddress length]-1;k++)
+            {
+                const unichar escapeSeq=[streetAddress characterAtIndex:k];
+                
+                if(escapeSeq == L'\u2013')
+                {
+                    NSLog(@"Unicode En-Dash character detected. Replacing it..");
+                    NSString *beforeSeq=[[streetAddress substringToIndex:k]retain];
+                    NSString *afterSeq=[[streetAddress substringFromIndex:k+1]retain];
+                    streetAddress=beforeSeq;
+                    streetAddress=[[streetAddress stringByAppendingString:@"-"]retain];
+                    streetAddress= [[streetAddress stringByAppendingString:afterSeq]retain];
+                    
+                    [beforeSeq release];
+                    [afterSeq release];
+                }
+            }
+            
             
             NSLog(@"logged in from:");
             NSLog(@"street: %@",streetAddress);

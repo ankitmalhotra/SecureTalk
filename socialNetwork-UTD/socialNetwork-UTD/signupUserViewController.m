@@ -24,6 +24,8 @@
     mainViewObj=[[messengerViewController alloc]init];
     restObj=[[messengerRESTclient alloc]init];
     appDelegateObj=[[messengerAppDelegate alloc]init];
+    
+    connProgress.hidden=TRUE;
 }
 
 -(IBAction)switchBackLogin
@@ -75,10 +77,15 @@
     NSLog(@"password: %@",password);
     NSLog(@"retypePwd: %@",retypePwd);
     
-    BOOL signupCheck=[password isEqualToString:retypePwd] && ![userName isEqualToString:@""] && ![userID isEqualToString:@""] && ![emailID isEqualToString:@""] && [emailID rangeOfString:@"@"].location!=NSNotFound && [domainID rangeOfString:@".com"].location!=NSNotFound && ![password isEqualToString:@""] && ![retypePwd isEqualToString:@""];
+    BOOL signupCheck=[password isEqualToString:retypePwd] && ![userName isEqualToString:@""] && ![userID isEqualToString:@""] && ![emailID isEqualToString:@""] && [emailID rangeOfString:@"@"].location!=NSNotFound && [domainID rangeOfString:@"."].location!=NSNotFound && ![password isEqualToString:@""] && ![retypePwd isEqualToString:@""];
     
     if(signupCheck)
     {
+        connProgress.hidden=FALSE;
+        [connProgress startAnimating];
+        signupBtn.enabled=FALSE;
+        backToLoginBtn.enabled=FALSE;
+        
         /*Retreive the device token ID*/
         appDelegateObj=[[messengerAppDelegate alloc]init];
         deviceToken=[[appDelegateObj getDeviceToken]retain];
@@ -90,16 +97,19 @@
         
         /*Call to add-new-user endpoint*/
         [restObj addNewUser:userID :userName :password :emailID :tokenstr :@"add"];
-        double delayInSeconds = 2.3;
+        double delayInSeconds = 4.0;
         dispatch_time_t popTime = dispatch_time(DISPATCH_TIME_NOW, (int64_t)(delayInSeconds * NSEC_PER_SEC));
         dispatch_after(popTime, dispatch_get_main_queue(), ^(void){
             NSLog(@"calling for status !");
             retVal=[restObj returnValue];
             if(retVal==1)
             {
+                connProgress.hidden=TRUE;
+                [connProgress stopAnimating];
+                
                 [mainViewObj getUserMailID:emailID];
                 [self dismissViewControllerAnimated:YES completion:nil];
-                UIAlertView *signUpSuccessAlert=[[UIAlertView alloc]initWithTitle:@"SignUp successful" message:nil delegate:nil cancelButtonTitle:@"Ok" otherButtonTitles:nil, nil];
+                UIAlertView *signUpSuccessAlert=[[UIAlertView alloc]initWithTitle:@"SignUp successful" message:@"Login to continue" delegate:nil cancelButtonTitle:@"Ok" otherButtonTitles:nil, nil];
                 [signUpSuccessAlert show];
                 [signUpSuccessAlert release];
                 
@@ -110,9 +120,39 @@
             }
             else
             {
-                UIAlertView *signUpFailAlert=[[UIAlertView alloc]initWithTitle:@"SignUp Failed" message:@"Connection failiure. Please try again." delegate:nil cancelButtonTitle:@"Ok" otherButtonTitles:nil, nil];
-                [signUpFailAlert show];
-                [signUpFailAlert release];
+                double delayInSeconds = 4.0;
+                dispatch_time_t popTime = dispatch_time(DISPATCH_TIME_NOW, (int64_t)(delayInSeconds * NSEC_PER_SEC));
+                dispatch_after(popTime, dispatch_get_main_queue(), ^(void){
+                    NSLog(@"calling for status !");
+                    retVal=[restObj returnValue];
+                    if(retVal==1)
+                    {
+                        connProgress.hidden=TRUE;
+                        [connProgress stopAnimating];
+                        
+                        [mainViewObj getUserMailID:emailID];
+                        [self dismissViewControllerAnimated:YES completion:nil];
+                        UIAlertView *signUpSuccessAlert=[[UIAlertView alloc]initWithTitle:@"SignUp successful" message:@"Login to continue" delegate:nil cancelButtonTitle:@"Ok" otherButtonTitles:nil, nil];
+                        [signUpSuccessAlert show];
+                        [signUpSuccessAlert release];
+                        
+                        /*Release allocated objects*/
+                        [mainViewObj release];
+                        [restObj release];
+                        [appDelegateObj release];
+                    }
+                    else
+                    {
+                        connProgress.hidden=TRUE;
+                        [connProgress stopAnimating];
+                        signupBtn.enabled=TRUE;
+                        backToLoginBtn.enabled=TRUE;
+                        
+                        UIAlertView *signUpFailAlert=[[UIAlertView alloc]initWithTitle:@"SignUp Failed" message:@"Connection failiure. Please try again." delegate:nil cancelButtonTitle:@"Ok" otherButtonTitles:nil, nil];
+                        [signUpFailAlert show];
+                        [signUpFailAlert release];
+                    }
+                });
             }
 
         });
@@ -158,7 +198,7 @@
         newPasswordField.text=@"";
         retypePasswordField.text=@"";
     }
-    else if ([emailID rangeOfString:@"@"].location==NSNotFound || [domainID rangeOfString:@".com"].location==NSNotFound)
+    else if ([emailID rangeOfString:@"@"].location==NSNotFound)
     {
         UIAlertView *wrongEmailID=[[UIAlertView alloc]initWithTitle:@"Error" message:@"Please provide a valid email ID" delegate:self cancelButtonTitle:@"Ok" otherButtonTitles:nil, nil];
         [wrongEmailID show];

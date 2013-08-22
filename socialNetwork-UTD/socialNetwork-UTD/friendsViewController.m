@@ -16,6 +16,8 @@ static NSString *const kHostName = @"appserver.utdallas.edu";
 static NSMutableArray *onlineBuddies;
 static NSMutableArray *offlineBuddies;
 
+static int chatStatus=0;
+
 @implementation friendsViewController
 
 
@@ -50,7 +52,12 @@ static NSMutableArray *offlineBuddies;
     /*Object instantiations*/
     mainViewObj=[[messengerViewController alloc] init];
     onlineBuddies = [[NSMutableArray alloc ] init];
-    offlineBuddies = [[NSMutableArray alloc]init];
+    restObj=[[messengerRESTclient alloc]init];
+    
+    if(!offlineBuddies)
+    {
+        offlineBuddies = [[NSMutableArray alloc]init];  
+    }
     
     messengerAppDelegate *appDel=[self appDelegate];
     appDel._chatDelegate=self;
@@ -59,23 +66,35 @@ static NSMutableArray *offlineBuddies;
 	NSString *login = [[loginViewObj getXmppJID]retain];
 	NSLog(@"JID received: %@",login);
     
-	if (login)
+    if(chatStatus==0)
     {
-		if ([[self appDelegate] connect])
+        chatStatusBarItem.title=@"Go Offline";
+        chatStatusBarItem.image=[UIImage imageNamed:@"offline.png"];
+        [chatStatusTab setSelectedImageTintColor:[UIColor greenColor]];
+        
+        if(login)
         {
-            double delayInSeconds = 1.0;
-            dispatch_time_t popTime = dispatch_time(DISPATCH_TIME_NOW, (int64_t)(delayInSeconds * NSEC_PER_SEC));
-            dispatch_after(popTime, dispatch_get_main_queue(), ^(void){
-                [tabVw reloadData];
-                NSLog(@"Login successful!!");
-            });
-		}
-	}
+            if([[self appDelegate] connect])
+            {
+                double delayInSeconds = 1.0;
+                dispatch_time_t popTime = dispatch_time(DISPATCH_TIME_NOW, (int64_t)(delayInSeconds * NSEC_PER_SEC));
+                dispatch_after(popTime, dispatch_get_main_queue(), ^(void){
+                    [tabVw reloadData];
+                    NSLog(@"Login successful!!");
+                });
+            }
+        }
+        else
+        {
+            NSLog(@"Login unsuccessful");
+        }
+    }
     else
     {
-		NSLog(@"Login unsuccessful");
-	}
-
+        chatStatusBarItem.title=@"Go Online";
+        chatStatusBarItem.image=[UIImage imageNamed:@"offline.png"];
+    }
+	
     refreshControl=[[UIRefreshControl alloc]init];
     [refreshControl addTarget:self action:@selector(refreshUI) forControlEvents:UIControlEventValueChanged];
     [tabVw addSubview:refreshControl];
@@ -90,15 +109,47 @@ static NSMutableArray *offlineBuddies;
 
 -(void)refreshUI
 {
-    if ([[self appDelegate] connect])
+    if(chatStatus==0)
     {
-        double delayInSeconds = 1.0;
+        if([offlineBuddies count]==0)
+        {
+            [mainViewObj fetchRosterForMe];
+        }
+        double delayInSeconds = 3.0;
         dispatch_time_t popTime = dispatch_time(DISPATCH_TIME_NOW, (int64_t)(delayInSeconds * NSEC_PER_SEC));
         dispatch_after(popTime, dispatch_get_main_queue(), ^(void){
-            [tabVw reloadData];
-            NSLog(@"Login successful!!");
-            [refreshControl endRefreshing];
+            if ([[self appDelegate] connect])
+            {
+                [tabVw reloadData];
+                NSLog(@"Login successful!!");
+                [refreshControl endRefreshing];
+            }
+            else
+            {
+                [tabVw reloadData];
+                NSLog(@"Login unsuccessful");
+                [refreshControl endRefreshing];
+            }
         });
+    }
+    else
+    {
+        if ([[self appDelegate] disconnect])
+        {
+            if([offlineBuddies count]==0)
+            {
+                [mainViewObj fetchRosterForMe];
+            }
+            double delayInSeconds = 3.0;
+            dispatch_time_t popTime = dispatch_time(DISPATCH_TIME_NOW, (int64_t)(delayInSeconds * NSEC_PER_SEC));
+            dispatch_after(popTime, dispatch_get_main_queue(), ^(void){
+                [self setAllOffline];
+                [tabVw reloadData];
+                NSLog(@"Logout successful!!");
+                [refreshControl endRefreshing];
+            });
+        }
+
     }
 }
 
@@ -163,7 +214,6 @@ static NSMutableArray *offlineBuddies;
 {
     if(indexPath.section==0)
     {
-        NSLog(@"cell text: %@",[onlineBuddies objectAtIndex:[indexPath row]]);
         static NSString *CellIdentifier = @"OnlineFriendCell";
         
         UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:CellIdentifier];
@@ -171,23 +221,35 @@ static NSMutableArray *offlineBuddies;
         {
             cell = [[[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:CellIdentifier] autorelease];
         }
-
-        if([onlineBuddies count]>0)
+        
+        if([indexPath row]<[onlineBuddies count])
         {
-            selectedIndex=[onlineBuddies objectAtIndex:[indexPath row]];
-            cell.textLabel.text=selectedIndex;
-            return cell;
+            //NSLog(@"cell text: %@",[onlineBuddies objectAtIndex:[indexPath row]]);
+            
+            if([onlineBuddies count]>0)
+            {
+                selectedIndex=[onlineBuddies objectAtIndex:[indexPath row]];
+                cell.textLabel.text=selectedIndex;
+                [cell setUserInteractionEnabled:YES];
+                return cell;
+            }
+            else
+            {
+                selectedIndex=NULL;
+                cell.textLabel.text=selectedIndex;
+                return cell;
+            }
         }
         else
         {
             selectedIndex=NULL;
             cell.textLabel.text=selectedIndex;
+            [cell setUserInteractionEnabled:NO];
             return cell;
         }
     }
     if (indexPath.section==1)
     {
-        NSLog(@"cell text: %@",[offlineBuddies objectAtIndex:[indexPath row]]);
         static NSString *CellIdentifier = @"OfflineFriendCell";
         
         UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:CellIdentifier];
@@ -195,19 +257,31 @@ static NSMutableArray *offlineBuddies;
         {
             cell = [[[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:CellIdentifier] autorelease];
         }
-        
-        if([offlineBuddies count]>0)
+
+        if([indexPath row]<[offlineBuddies count])
         {
-            selectedIndex=[offlineBuddies objectAtIndex:[indexPath row]];
-            cell.textLabel.text=selectedIndex;
-            cell.textLabel.textColor=[UIColor grayColor];
-            [cell setUserInteractionEnabled:NO];
-            return cell;
+            //NSLog(@"cell text: %@",[offlineBuddies objectAtIndex:[indexPath row]]);
+                        
+            if([offlineBuddies count]>0)
+            {
+                selectedIndex=[offlineBuddies objectAtIndex:[indexPath row]];
+                cell.textLabel.text=selectedIndex;
+                cell.textLabel.textColor=[UIColor grayColor];
+                [cell setUserInteractionEnabled:NO];
+                return cell;
+            }
+            else
+            {
+                selectedIndex=NULL;
+                cell.textLabel.text=selectedIndex;
+                return cell;
+            }
         }
         else
         {
             selectedIndex=NULL;
             cell.textLabel.text=selectedIndex;
+            [cell setUserInteractionEnabled:NO];
             return cell;
         }
     }
@@ -253,23 +327,6 @@ static NSMutableArray *offlineBuddies;
     //[self dismissViewControllerAnimated:YES completion:nil];
 }
 
-- (BOOL)tableView:(UITableView *)tableView canEditRowAtIndexPath:(NSIndexPath *)indexPath
-{
-    // Return YES if you want the specified item to be editable.
-    return YES;
-}
-
-// Override to support editing the table view.
-- (void)tableView:(UITableView *)tableView commitEditingStyle:(UITableViewCellEditingStyle)editingStyle forRowAtIndexPath:(NSIndexPath *)indexPath
-{
-    if (editingStyle == UITableViewCellEditingStyleDelete)
-    {
-        NSLog(@"deleting %@",selectedIndex);
-        XMPPJID *buddyToRemove=[XMPPJID jidWithString:selectedIndex];
-        [[self appDelegate]removeBuddy:buddyToRemove];
-    }
-}
-
 
 -(void)sendBuddyRequest:(NSString *)name
 {
@@ -277,6 +334,17 @@ static NSMutableArray *offlineBuddies;
     name=[name stringByAppendingString:kHostName];
     XMPPJID *newBuddy = [XMPPJID jidWithString:name];
     [[self appDelegate]getRoster:newBuddy];
+}
+
+/*Receive the list of all buddies in the user's roster*/
+-(void)receiveAllBuddies: (NSMutableArray *)allBuddyList
+{
+    if(offlineBuddies==NULL)
+    {
+        offlineBuddies=[[NSMutableArray alloc]init];
+    }
+    [offlineBuddies addObjectsFromArray:[allBuddyList retain]];
+    NSLog(@"receiving buddy list to be shown: %@",[offlineBuddies retain]);
 }
 
 #pragma mark -
@@ -311,6 +379,20 @@ static NSMutableArray *offlineBuddies;
     {
         [offlineBuddies addObject:buddyName];
     }
+	[tabVw reloadData];
+}
+
+-(void)setAllOffline
+{
+    if([onlineBuddies count]>0)
+    {
+        for(int j=0;j<[onlineBuddies count];j++)
+        {
+            [offlineBuddies addObject:[onlineBuddies objectAtIndex:j]];
+            [onlineBuddies removeObjectAtIndex:j];
+        }
+    }
+    
 	[tabVw reloadData];
 }
 
@@ -364,6 +446,33 @@ static NSMutableArray *offlineBuddies;
 }
 
 
+#pragma mark - Tab-bar delegate
+
+- (void)tabBar:(UITabBar *)tabBar didSelectItem:(UITabBarItem *)item
+{
+    if(item==chatStatusBarItem)
+    {
+       if(chatStatus==0)
+       {
+           chatStatus=1;
+           chatStatusBarItem.title=@"Go Online";
+           [chatStatusTab setSelectedImageTintColor:[UIColor grayColor]];
+           [[self appDelegate]disconnect];
+           
+           [tabVw reloadData];
+       }
+       else if (chatStatus==1)
+       {
+           chatStatus=0;
+           chatStatusBarItem.title=@"Go Offline";
+           [chatStatusTab setSelectedImageTintColor:[UIColor greenColor]];
+           [[self appDelegate]connect];
+        
+           [tabVw reloadData];
+       }
+    }
+    
+}
 - (void)didReceiveMemoryWarning
 {
     [super didReceiveMemoryWarning];

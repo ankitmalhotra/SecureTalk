@@ -36,11 +36,12 @@
     NSString *_chatMessage;
     
     /*XMPP related objs*/
-    XMPPStream *xmppStream;
-    XMPPRoster *xmppRoster;
+    
     XMPPRosterCoreDataStorage *xmppRosterStorage;
     NSString *xmppPassword;
     NSString *buddyPresenceToSend;
+    XMPPStream *xmppStream;
+    XMPPRoster *xmppRoster;
     BOOL isOpen;
     BOOL allowSelfSignedCertificates;
     __weak NSObject <messengerChatDelegate> *_chatDelegate;
@@ -52,11 +53,9 @@
 
 @property (strong, nonatomic) messengerViewController *viewController;
 
-@property (strong, nonatomic) CLLocationManager *locationManager;
-
-@property (nonatomic, readonly) XMPPStream *xmppStream;
-@property (nonatomic, readonly) XMPPRoster *xmppRoster;
-@property (nonatomic, strong, readonly) XMPPRosterCoreDataStorage *xmppRosterStorage;
+@property (nonatomic, retain, strong) XMPPStream *xmppStream;
+@property (nonatomic, retain, strong) XMPPRoster *xmppRoster;
+@property (nonatomic, retain, strong) XMPPRosterCoreDataStorage *xmppRosterStorage;
 
 
 @property (nonatomic, assign) id  _chatDelegate;
@@ -71,10 +70,10 @@
 
 /*XMPP methods*/
 -(BOOL)connect;
--(void)disconnect;
+-(BOOL)disconnect;
 -(void)getRoster: (XMPPJID *)buddyName;
 -(void)removeBuddy: (XMPPJID *)buddyName;
--(NSString *)acceptRequest: (int)check;
+-(NSString *)fetchCurrentJID: (int)check;
 
 
 @end
