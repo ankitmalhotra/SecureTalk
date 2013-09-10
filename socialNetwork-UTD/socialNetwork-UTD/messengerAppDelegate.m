@@ -81,7 +81,7 @@ static const int ddLogLevel = LOG_LEVEL_INFO;
     [[UIApplication sharedApplication]registerForRemoteNotificationTypes:UIRemoteNotificationTypeAlert];
     [[UIApplication sharedApplication]registerForRemoteNotificationTypes:UIRemoteNotificationTypeBadge];
     [[UIApplication sharedApplication]registerForRemoteNotificationTypes:UIRemoteNotificationTypeSound];
-    
+     
     if (launchOptions != nil)
 	{
 		NSDictionary* dictionary = [launchOptions objectForKey:UIApplicationLaunchOptionsRemoteNotificationKey];

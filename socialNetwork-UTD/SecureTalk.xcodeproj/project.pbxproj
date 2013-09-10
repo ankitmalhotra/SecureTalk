@@ -77,7 +77,6 @@
 		FEA8933317C1B23B0051F28A /* settings_patch.png in Resources */ = {isa = PBXBuildFile; fileRef = FEA8933217C1B23A0051F28A /* settings_patch.png */; };
 		FEA9F5F81752D18E000668B6 /* texture04.jpg in Resources */ = {isa = PBXBuildFile; fileRef = FEA9F5F51752D18E000668B6 /* texture04.jpg */; };
 		FEA9F5F91752D18E000668B6 /* texture03.jpg in Resources */ = {isa = PBXBuildFile; fileRef = FEA9F5F61752D18E000668B6 /* texture03.jpg */; };
-		FEABE8A916464064000F27FD /* secureMessageRSA.m in Sources */ = {isa = PBXBuildFile; fileRef = FEABE8A816464064000F27FD /* secureMessageRSA.m */; settings = {COMPILER_FLAGS = "-fno-objc-arc"; }; };
 		FEAD17F116F4FCDD00FB0685 /* sign-in-btn.png in Resources */ = {isa = PBXBuildFile; fileRef = FEAD17F016F4FCDD00FB0685 /* sign-in-btn.png */; };
 		FEAEAD79174FF32400345B42 /* libxml2.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = FEAEAD78174FF32400345B42 /* libxml2.dylib */; };
 		FEAEAF7A174FFC3400345B42 /* DDAbstractDatabaseLogger.m in Sources */ = {isa = PBXBuildFile; fileRef = FEAEAF6B174FFC3300345B42 /* DDAbstractDatabaseLogger.m */; };
@@ -212,6 +211,7 @@
 		FEB39CEE1731E9EE0042413B /* AddressBook.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = FEB39CED1731E9EE0042413B /* AddressBook.framework */; };
 		FECCDC5F165727DC0084447E /* CFNetwork.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = FECCDC5E165727DC0084447E /* CFNetwork.framework */; };
 		FECF55751798CB3000F37A7C /* red_btn-retina.png in Resources */ = {isa = PBXBuildFile; fileRef = FECF55741798CB3000F37A7C /* red_btn-retina.png */; };
+		FED661C217D3E868007FC6F9 /* Reachability.m in Sources */ = {isa = PBXBuildFile; fileRef = FED661C117D3E868007FC6F9 /* Reachability.m */; settings = {COMPILER_FLAGS = "-fno-objc-arc"; }; };
 		FEEC2C0916314087000B2329 /* MapKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = FEEC2C0816314087000B2329 /* MapKit.framework */; };
 		FEF58E29176AAB230090DDA4 /* texture09.jpg in Resources */ = {isa = PBXBuildFile; fileRef = FEF58E27176AAB230090DDA4 /* texture09.jpg */; };
 		FEFDD41E162E37B600B88CFA /* Security.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = FEFDD41D162E37B600B88CFA /* Security.framework */; };
@@ -312,8 +312,6 @@
 		FEA8933217C1B23A0051F28A /* settings_patch.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = settings_patch.png; sourceTree = "<group>"; };
 		FEA9F5F51752D18E000668B6 /* texture04.jpg */ = {isa = PBXFileReference; lastKnownFileType = image.jpeg; path = texture04.jpg; sourceTree = "<group>"; };
 		FEA9F5F61752D18E000668B6 /* texture03.jpg */ = {isa = PBXFileReference; lastKnownFileType = image.jpeg; path = texture03.jpg; sourceTree = "<group>"; };
-		FEABE8A716464064000F27FD /* secureMessageRSA.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = secureMessageRSA.h; sourceTree = "<group>"; };
-		FEABE8A816464064000F27FD /* secureMessageRSA.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = secureMessageRSA.m; sourceTree = "<group>"; };
 		FEAD17F016F4FCDD00FB0685 /* sign-in-btn.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "sign-in-btn.png"; sourceTree = "<group>"; };
 		FEAEAD78174FF32400345B42 /* libxml2.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libxml2.dylib; path = usr/lib/libxml2.dylib; sourceTree = SDKROOT; };
 		FEAEAF6A174FFC3300345B42 /* DDAbstractDatabaseLogger.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = DDAbstractDatabaseLogger.h; path = ../XMPPFramework/Vendor/CocoaLumberjack/DDAbstractDatabaseLogger.h; sourceTree = "<group>"; };
@@ -581,6 +579,8 @@
 		FEB39CED1731E9EE0042413B /* AddressBook.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AddressBook.framework; path = System/Library/Frameworks/AddressBook.framework; sourceTree = SDKROOT; };
 		FECCDC5E165727DC0084447E /* CFNetwork.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CFNetwork.framework; path = System/Library/Frameworks/CFNetwork.framework; sourceTree = SDKROOT; };
 		FECF55741798CB3000F37A7C /* red_btn-retina.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "red_btn-retina.png"; sourceTree = "<group>"; };
+		FED661C017D3E868007FC6F9 /* Reachability.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Reachability.h; sourceTree = "<group>"; };
+		FED661C117D3E868007FC6F9 /* Reachability.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = Reachability.m; sourceTree = "<group>"; };
 		FEE08A5017B7241A0062364A /* SecureTalk.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = SecureTalk.entitlements; sourceTree = SOURCE_ROOT; };
 		FEEC2C0816314087000B2329 /* MapKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = MapKit.framework; path = System/Library/Frameworks/MapKit.framework; sourceTree = SDKROOT; };
 		FEF58E27176AAB230090DDA4 /* texture09.jpg */ = {isa = PBXFileReference; lastKnownFileType = image.jpeg; path = texture09.jpg; sourceTree = "<group>"; };
@@ -592,8 +592,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				FE59BFF3177404E700EC636B /* QuartzCore.framework in Frameworks */,
 				FEAEB13C175013C300345B42 /* SystemConfiguration.framework in Frameworks */,
+				FE59BFF3177404E700EC636B /* QuartzCore.framework in Frameworks */,
 				FEAEB13A175013B000345B42 /* CoreData.framework in Frameworks */,
 				FEAEB00C174FFFFB00345B42 /* libresolv.dylib in Frameworks */,
 				FEAEAD79174FF32400345B42 /* libxml2.dylib in Frameworks */,
@@ -615,6 +615,7 @@
 		FE0AFCCD16255A0F000A92C9 = {
 			isa = PBXGroup;
 			children = (
+				FED661BF17D3E851007FC6F9 /* Reachability */,
 				FE14679C178F5BB10065B05D /* SideMenu */,
 				FEAEAD45174FF17D00345B42 /* XMPP */,
 				FE4C15271745421F00674A50 /* UIBubbleTableView */,
@@ -660,7 +661,6 @@
 				FEE08A5017B7241A0062364A /* SecureTalk.entitlements */,
 				FE89AE6E16B84BB8001FA8C8 /* RESTclasses */,
 				FE89AE6D16B84B74001FA8C8 /* InterfaceBuilders */,
-				FE8BEF2A165B3D68007FCA3B /* cryptoFiles */,
 				FEAEB13F1750605A00345B42 /* messengerChatDelegate.h */,
 				FEAEB1401750605B00345B42 /* messengerMessageDelegate.h */,
 				FE0AFCEB16255A10000A92C9 /* messengerAppDelegate.h */,
@@ -783,15 +783,6 @@
 				FE90F9A716ACC6520089B34F /* messengerRESTclient.m */,
 			);
 			name = RESTclasses;
-			sourceTree = "<group>";
-		};
-		FE8BEF2A165B3D68007FCA3B /* cryptoFiles */ = {
-			isa = PBXGroup;
-			children = (
-				FEABE8A716464064000F27FD /* secureMessageRSA.h */,
-				FEABE8A816464064000F27FD /* secureMessageRSA.m */,
-			);
-			name = cryptoFiles;
 			sourceTree = "<group>";
 		};
 		FEAD17E916F4801600FB0685 /* img_src_files */ = {
@@ -1565,6 +1556,15 @@
 			path = "XEP-0308";
 			sourceTree = "<group>";
 		};
+		FED661BF17D3E851007FC6F9 /* Reachability */ = {
+			isa = PBXGroup;
+			children = (
+				FED661C017D3E868007FC6F9 /* Reachability.h */,
+				FED661C117D3E868007FC6F9 /* Reachability.m */,
+			);
+			name = Reachability;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -1684,7 +1684,6 @@
 				FE0AFCE916255A10000A92C9 /* main.m in Sources */,
 				FE0AFCED16255A10000A92C9 /* messengerAppDelegate.m in Sources */,
 				FE0AFCF616255A10000A92C9 /* messengerViewController.m in Sources */,
-				FEABE8A916464064000F27FD /* secureMessageRSA.m in Sources */,
 				FE4718421652C4B1004B4ED0 /* loginViewController.m in Sources */,
 				FE1FCFA6166E7D7D009E61C7 /* groupsTableViewViewController.m in Sources */,
 				FE502323167FC8F100A560EE /* friendsViewController.m in Sources */,
@@ -1821,6 +1820,7 @@
 				FEAEB1381750011600345B42 /* XMPPMessage+XEP_0308.m in Sources */,
 				FE6312B817544DC9003A0000 /* findFriendViewController.m in Sources */,
 				FE1467A1178F5BC40065B05D /* MFSideMenuContainerViewController.m in Sources */,
+				FED661C217D3E868007FC6F9 /* Reachability.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1854,8 +1854,8 @@
 				CLANG_CXX_LIBRARY = "libc++";
 				CLANG_WARN_EMPTY_BODY = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
-				CODE_SIGN_IDENTITY = "iPhone Developer: Ankit Malhotra (T6U27WJNM9)";
-				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer: Ankit Malhotra (T6U27WJNM9)";
+				CODE_SIGN_IDENTITY = "iPhone Distribution: University of Texas at Dallas (KC58R3USUQ)";
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Distribution: University of Texas at Dallas (KC58R3USUQ)";
 				COPY_PHASE_STRIP = NO;
 				GCC_C_LANGUAGE_STANDARD = gnu99;
 				GCC_DYNAMIC_NO_PIC = NO;
@@ -1869,8 +1869,8 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 6.1;
-				PROVISIONING_PROFILE = "E0C2FE4D-1FC4-4175-B7BC-E824254513E9";
-				"PROVISIONING_PROFILE[sdk=iphoneos*]" = "E0C2FE4D-1FC4-4175-B7BC-E824254513E9";
+				PROVISIONING_PROFILE = "29681783-CEF6-4832-BD85-2ED7B03A5306";
+				"PROVISIONING_PROFILE[sdk=iphoneos*]" = "29681783-CEF6-4832-BD85-2ED7B03A5306";
 				SDKROOT = iphoneos;
 			};
 			name = Debug;
@@ -1883,8 +1883,8 @@
 				CLANG_CXX_LIBRARY = "libc++";
 				CLANG_WARN_EMPTY_BODY = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
-				CODE_SIGN_IDENTITY = "iPhone Developer: Ankit Malhotra (T6U27WJNM9)";
-				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer: Ankit Malhotra (T6U27WJNM9)";
+				CODE_SIGN_IDENTITY = "iPhone Distribution: University of Texas at Dallas (KC58R3USUQ)";
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Distribution: University of Texas at Dallas (KC58R3USUQ)";
 				COPY_PHASE_STRIP = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu99;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
@@ -1892,8 +1892,8 @@
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 6.1;
 				OTHER_CFLAGS = "-DNS_BLOCK_ASSERTIONS=1";
-				PROVISIONING_PROFILE = "E0C2FE4D-1FC4-4175-B7BC-E824254513E9";
-				"PROVISIONING_PROFILE[sdk=iphoneos*]" = "E0C2FE4D-1FC4-4175-B7BC-E824254513E9";
+				PROVISIONING_PROFILE = "29681783-CEF6-4832-BD85-2ED7B03A5306";
+				"PROVISIONING_PROFILE[sdk=iphoneos*]" = "29681783-CEF6-4832-BD85-2ED7B03A5306";
 				SDKROOT = iphoneos;
 				VALIDATE_PRODUCT = YES;
 			};

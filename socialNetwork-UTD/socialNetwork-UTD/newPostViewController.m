@@ -7,8 +7,6 @@
 //
 
 #import "newPostViewController.h"
-#import "secureMessageRSA.h"
-
 
 static double _locationLat,_locationLong;
 static NSString *localUserId;
@@ -105,7 +103,9 @@ int locationCheck=0;
     [self setUserGroup];
     NSLog(@"received: %@",localGrpName);
     
-    BOOL validLocationCheck= (![[streetAddress retain] isEqualToString:@""] && [streetAddress retain]!=NULL && ![city isEqualToString:@""] && city!=NULL && ![state isEqualToString:@""] && state!=NULL);
+    
+    BOOL validLocationCheck= (![[streetAddress retain] isEqualToString:@""] && [streetAddress retain]!=NULL && ![[city retain] isEqualToString:@""] && [city retain]!=NULL && ![[state retain]isEqualToString:@""] && [state retain]!=NULL);
+    
     if(![messageData isEqualToString: @""])
     {
         if(locationCheck==1)
@@ -140,130 +140,193 @@ int locationCheck=0;
             messageVw.editable=FALSE;
             messageVw.userInteractionEnabled=FALSE;
             
-            dispatch_async(dispatch_get_main_queue(), ^{
-                /*Place call to server with new post data & user,group,coord details*/
-                [restObj createNewPost:localUserNumber :localGrpNumber :messageData :_locationLat :_locationLong :localAccessToken :@"postMessage"];
-            });
+            /*Check for internet availability status*/
+            internetReachability = [Reachability reachabilityForInternetConnection];
+            NetworkStatus networkStatus = [internetReachability currentReachabilityStatus];
             
-            double delayInSeconds = 3.0;
-            dispatch_time_t popTime = dispatch_time(DISPATCH_TIME_NOW, (int64_t)(delayInSeconds * NSEC_PER_SEC));
-            dispatch_after(popTime, dispatch_get_main_queue(), ^(void){
-                NSLog(@"calling for status from server..");
-                retVal=[restObj returnValue];
-                NSLog(@"status received:%d",retVal);
-                if(retVal==1)
-                {
-                    connProgress.hidden=TRUE;
-                    [connProgress stopAnimating];
-                    
-                    [mainViewObj clearBufferList];
-                    [mainViewObj clearAllPosts];
-                    
-                    /*Call to main to update table view for new post*/
-                    [mainViewObj showPostData:localGrpName];
-                    [mainViewObj setPostsRefreshSignal];
-                    
-                    /*Call encryption routine to encrypt the message*/
-                    [secureMessageRSA encryptMessage:messageData];
-                    [secureMessageRSA decryptMessage];
-                    
-                    UIAlertView *createdAlert=[[UIAlertView alloc]initWithTitle:@"Success" message:[NSString stringWithFormat:@"Message Successfully posted"] delegate:self cancelButtonTitle:@"OK" otherButtonTitles:nil, nil];
-                    [createdAlert show];
-                    [createdAlert release];
-                    [self dismissViewControllerAnimated:YES completion:NULL];
-                }
-                else if (retVal==0)
-                {
-                    double delayInSeconds = 4.0;
-                    dispatch_time_t popTime = dispatch_time(DISPATCH_TIME_NOW, (int64_t)(delayInSeconds * NSEC_PER_SEC));
-                    dispatch_after(popTime, dispatch_get_main_queue(), ^(void){
-                        NSLog(@"calling for status from server..");
-                        retVal=[restObj returnValue];
-                        NSLog(@"status received:%d",retVal);
-                        if(retVal==1)
-                        {
-                            connProgress.hidden=TRUE;
-                            [connProgress stopAnimating];
-                            
-                            [mainViewObj clearBufferList];
-                            [mainViewObj clearAllPosts];
-                            
-                            /*Call to main to update table view for new post*/
-                            [mainViewObj showPostData:localGrpName];
-                            [mainViewObj setPostsRefreshSignal];
-                            
-                            /*Call encryption routine to encrypt the message*/
-                            [secureMessageRSA encryptMessage:messageData];
-                            [secureMessageRSA decryptMessage];
-                            
-                            UIAlertView *createdAlert=[[UIAlertView alloc]initWithTitle:@"Success" message:[NSString stringWithFormat:@"Message Successfully posted"] delegate:self cancelButtonTitle:@"OK" otherButtonTitles:nil, nil];
-                            [createdAlert show];
-                            [createdAlert release];
-                            [self dismissViewControllerAnimated:YES completion:NULL];
-                        }
-                        else if (retVal==0)
-                        {
-                            UIAlertView *connNullAlert=[[UIAlertView alloc]initWithTitle:@"Connection Error" message:@"Unable to contact server. Please try again." delegate:nil cancelButtonTitle:@"Ok" otherButtonTitles:nil, nil];
-                            [connNullAlert show];
-                            [connNullAlert release];
-                            postButton.enabled=TRUE;
-                            cancelButton.enabled=TRUE;
-                            messageVw.editable=TRUE;
-                            messageVw.userInteractionEnabled=TRUE;
-                            connProgress.hidden=TRUE;
-                            [connProgress stopAnimating];
-                        }
-                        else if(retVal==-1)
-                        {
-                            UIAlertView *createdAlert=[[UIAlertView alloc]initWithTitle:@"Failed" message:[NSString stringWithFormat:@"New Message could not be posted. Please try again"] delegate:self cancelButtonTitle:@"OK" otherButtonTitles:nil, nil];
-                            [createdAlert show];
-                            [createdAlert release];
-                            postButton.enabled=TRUE;
-                            cancelButton.enabled=TRUE;
-                            messageVw.editable=TRUE;
-                            messageVw.userInteractionEnabled=TRUE;
-                            connProgress.hidden=TRUE;
-                            [connProgress stopAnimating];
-                        }
-                        else if(retVal==43)
-                        {
-                            UIAlertView *duplicateMsgAlert=[[UIAlertView alloc]initWithTitle:@"Failed" message:[NSString stringWithFormat:@"You already posted this message a while ago ! Please check back."] delegate:self cancelButtonTitle:@"OK" otherButtonTitles:nil, nil];
-                            [duplicateMsgAlert show];
-                            [duplicateMsgAlert release];
-                            postButton.enabled=TRUE;
-                            cancelButton.enabled=TRUE;
-                            messageVw.editable=TRUE;
-                            messageVw.userInteractionEnabled=TRUE;
-                            connProgress.hidden=TRUE;
-                            [connProgress stopAnimating];
-                        }
-                    });
-                }
-                else if(retVal==-1)
-                {
-                    UIAlertView *createdAlert=[[UIAlertView alloc]initWithTitle:@"Failed" message:[NSString stringWithFormat:@"New Message could not be posted. Please try again"] delegate:self cancelButtonTitle:@"OK" otherButtonTitles:nil, nil];
-                    [createdAlert show];
-                    [createdAlert release];
-                    postButton.enabled=TRUE;
-                    cancelButton.enabled=TRUE;
-                    messageVw.editable=TRUE;
-                    messageVw.userInteractionEnabled=TRUE;
-                    connProgress.hidden=TRUE;
-                    [connProgress stopAnimating];
-                }
-                else if(retVal==43)
-                {
-                    UIAlertView *duplicateMsgAlert=[[UIAlertView alloc]initWithTitle:@"Failed" message:[NSString stringWithFormat:@"You already posted this message a while ago ! Please check back."] delegate:self cancelButtonTitle:@"OK" otherButtonTitles:nil, nil];
-                    [duplicateMsgAlert show];
-                    [duplicateMsgAlert release];
-                    postButton.enabled=TRUE;
-                    cancelButton.enabled=TRUE;
-                    messageVw.editable=TRUE;
-                    messageVw.userInteractionEnabled=TRUE;
-                    connProgress.hidden=TRUE;
-                    [connProgress stopAnimating];
-                }
-            });
+            if(networkStatus==NotReachable)
+            {
+                UIAlertView *networkOfflineAlert=[[UIAlertView alloc]initWithTitle:@"No Internet Connection !" message:@"The internet appears offline. Could not complete the request" delegate:self cancelButtonTitle:nil otherButtonTitles:@"OK", nil];
+                [networkOfflineAlert show];
+                [networkOfflineAlert release];
+                
+                postButton.enabled=TRUE;
+                cancelButton.enabled=TRUE;
+                messageVw.editable=TRUE;
+                messageVw.userInteractionEnabled=TRUE;
+                connProgress.hidden=TRUE;
+                [connProgress stopAnimating];
+            }
+            else
+            {
+                dispatch_async(dispatch_get_main_queue(), ^{
+                    /*Place call to server with new post data & user,group,coord details*/
+                    [restObj createNewPost:localUserNumber :localGrpNumber :messageData :_locationLat :_locationLong :localAccessToken :@"postMessage"];
+                });
+                
+                double delayInSeconds = 3.0;
+                dispatch_time_t popTime = dispatch_time(DISPATCH_TIME_NOW, (int64_t)(delayInSeconds * NSEC_PER_SEC));
+                dispatch_after(popTime, dispatch_get_main_queue(), ^(void){
+                    NSLog(@"calling for status from server..");
+                    retVal=[restObj returnValue];
+                    NSLog(@"status received:%d",retVal);
+                    if(retVal==1)
+                    {
+                        connProgress.hidden=TRUE;
+                        [connProgress stopAnimating];
+                        
+                        [mainViewObj clearBufferList];
+                        [mainViewObj clearAllPosts];
+                        
+                        /*Call to main to update table view for new post*/
+                        [mainViewObj showPostData:localGrpName];
+                        [mainViewObj setPostsRefreshSignal];
+                        
+                        UIAlertView *createdAlert=[[UIAlertView alloc]initWithTitle:@"Success" message:[NSString stringWithFormat:@"Message Successfully posted"] delegate:self cancelButtonTitle:@"OK" otherButtonTitles:nil, nil];
+                        [createdAlert show];
+                        [createdAlert release];
+                        [self dismissViewControllerAnimated:YES completion:NULL];
+                    }
+                    else if (retVal==0)
+                    {
+                        double delayInSeconds = 4.0;
+                        dispatch_time_t popTime = dispatch_time(DISPATCH_TIME_NOW, (int64_t)(delayInSeconds * NSEC_PER_SEC));
+                        dispatch_after(popTime, dispatch_get_main_queue(), ^(void){
+                            NSLog(@"calling for status from server..");
+                            retVal=[restObj returnValue];
+                            NSLog(@"status received:%d",retVal);
+                            if(retVal==1)
+                            {
+                                connProgress.hidden=TRUE;
+                                [connProgress stopAnimating];
+                                
+                                [mainViewObj clearBufferList];
+                                [mainViewObj clearAllPosts];
+                                
+                                /*Call to main to update table view for new post*/
+                                [mainViewObj showPostData:localGrpName];
+                                [mainViewObj setPostsRefreshSignal];
+                                
+                                UIAlertView *createdAlert=[[UIAlertView alloc]initWithTitle:@"Success" message:[NSString stringWithFormat:@"Message Successfully posted"] delegate:self cancelButtonTitle:@"OK" otherButtonTitles:nil, nil];
+                                [createdAlert show];
+                                [createdAlert release];
+                                [self dismissViewControllerAnimated:YES completion:NULL];
+                            }
+                            else if (retVal==0)
+                            {
+                                double delayInSeconds = 4.0;
+                                dispatch_time_t popTime = dispatch_time(DISPATCH_TIME_NOW, (int64_t)(delayInSeconds * NSEC_PER_SEC));
+                                dispatch_after(popTime, dispatch_get_main_queue(), ^(void){
+                                    NSLog(@"calling for status from server..");
+                                    retVal=[restObj returnValue];
+                                    NSLog(@"status received:%d",retVal);
+                                    if(retVal==1)
+                                    {
+                                        connProgress.hidden=TRUE;
+                                        [connProgress stopAnimating];
+                                        
+                                        [mainViewObj clearBufferList];
+                                        [mainViewObj clearAllPosts];
+                                        
+                                        /*Call to main to update table view for new post*/
+                                        [mainViewObj showPostData:localGrpName];
+                                        [mainViewObj setPostsRefreshSignal];
+                                        
+                                        UIAlertView *createdAlert=[[UIAlertView alloc]initWithTitle:@"Success" message:[NSString stringWithFormat:@"Message Successfully posted"] delegate:self cancelButtonTitle:@"OK" otherButtonTitles:nil, nil];
+                                        [createdAlert show];
+                                        [createdAlert release];
+                                        [self dismissViewControllerAnimated:YES completion:NULL];
+                                    }
+                                    else if (retVal==0)
+                                    {
+                                        UIAlertView *connNullAlert=[[UIAlertView alloc]initWithTitle:@"Connection Error" message:@"Unable to contact server. Please try again." delegate:nil cancelButtonTitle:@"Ok" otherButtonTitles:nil, nil];
+                                        [connNullAlert show];
+                                        [connNullAlert release];
+                                        postButton.enabled=TRUE;
+                                        cancelButton.enabled=TRUE;
+                                        messageVw.editable=TRUE;
+                                        messageVw.userInteractionEnabled=TRUE;
+                                        connProgress.hidden=TRUE;
+                                        [connProgress stopAnimating];
+                                    }
+                                    else if(retVal==-1)
+                                    {
+                                        UIAlertView *createdAlert=[[UIAlertView alloc]initWithTitle:@"Failed" message:[NSString stringWithFormat:@"New Message could not be posted. Please try again"] delegate:self cancelButtonTitle:@"OK" otherButtonTitles:nil, nil];
+                                        [createdAlert show];
+                                        [createdAlert release];
+                                        postButton.enabled=TRUE;
+                                        cancelButton.enabled=TRUE;
+                                        messageVw.editable=TRUE;
+                                        messageVw.userInteractionEnabled=TRUE;
+                                        connProgress.hidden=TRUE;
+                                        [connProgress stopAnimating];
+                                    }
+                                    else if(retVal==43)
+                                    {
+                                        UIAlertView *duplicateMsgAlert=[[UIAlertView alloc]initWithTitle:@"Failed" message:[NSString stringWithFormat:@"You already posted this message a while ago ! Please check back."] delegate:self cancelButtonTitle:@"OK" otherButtonTitles:nil, nil];
+                                        [duplicateMsgAlert show];
+                                        [duplicateMsgAlert release];
+                                        postButton.enabled=TRUE;
+                                        cancelButton.enabled=TRUE;
+                                        messageVw.editable=TRUE;
+                                        messageVw.userInteractionEnabled=TRUE;
+                                        connProgress.hidden=TRUE;
+                                        [connProgress stopAnimating];
+                                    }
+                                });
+                            }
+                            else if(retVal==-1)
+                            {
+                                UIAlertView *createdAlert=[[UIAlertView alloc]initWithTitle:@"Failed" message:[NSString stringWithFormat:@"New Message could not be posted. Please try again"] delegate:self cancelButtonTitle:@"OK" otherButtonTitles:nil, nil];
+                                [createdAlert show];
+                                [createdAlert release];
+                                postButton.enabled=TRUE;
+                                cancelButton.enabled=TRUE;
+                                messageVw.editable=TRUE;
+                                messageVw.userInteractionEnabled=TRUE;
+                                connProgress.hidden=TRUE;
+                                [connProgress stopAnimating];
+                            }
+                            else if(retVal==43)
+                            {
+                                UIAlertView *duplicateMsgAlert=[[UIAlertView alloc]initWithTitle:@"Failed" message:[NSString stringWithFormat:@"You already posted this message a while ago ! Please check back."] delegate:self cancelButtonTitle:@"OK" otherButtonTitles:nil, nil];
+                                [duplicateMsgAlert show];
+                                [duplicateMsgAlert release];
+                                postButton.enabled=TRUE;
+                                cancelButton.enabled=TRUE;
+                                messageVw.editable=TRUE;
+                                messageVw.userInteractionEnabled=TRUE;
+                                connProgress.hidden=TRUE;
+                                [connProgress stopAnimating];
+                            }
+                        });
+                    }
+                    else if(retVal==-1)
+                    {
+                        UIAlertView *createdAlert=[[UIAlertView alloc]initWithTitle:@"Failed" message:[NSString stringWithFormat:@"New Message could not be posted. Please try again"] delegate:self cancelButtonTitle:@"OK" otherButtonTitles:nil, nil];
+                        [createdAlert show];
+                        [createdAlert release];
+                        postButton.enabled=TRUE;
+                        cancelButton.enabled=TRUE;
+                        messageVw.editable=TRUE;
+                        messageVw.userInteractionEnabled=TRUE;
+                        connProgress.hidden=TRUE;
+                        [connProgress stopAnimating];
+                    }
+                    else if(retVal==43)
+                    {
+                        UIAlertView *duplicateMsgAlert=[[UIAlertView alloc]initWithTitle:@"Failed" message:[NSString stringWithFormat:@"You already posted this message a while ago ! Please check back."] delegate:self cancelButtonTitle:@"OK" otherButtonTitles:nil, nil];
+                        [duplicateMsgAlert show];
+                        [duplicateMsgAlert release];
+                        postButton.enabled=TRUE;
+                        cancelButton.enabled=TRUE;
+                        messageVw.editable=TRUE;
+                        messageVw.userInteractionEnabled=TRUE;
+                        connProgress.hidden=TRUE;
+                        [connProgress stopAnimating];
+                    }
+                });
+            }
         }
     }
     else
@@ -291,27 +354,40 @@ int locationCheck=0;
         /*Call to fetch current coords*/
         [mainViewObj initLocUpdate];
         
-        double delayInSeconds = 0.3;
-        dispatch_time_t popTime = dispatch_time(DISPATCH_TIME_NOW, (int64_t)(delayInSeconds * NSEC_PER_SEC));
-        dispatch_after(popTime, dispatch_get_main_queue(), ^(void){
-            /*Reverse Geo-coding*/
-            NSOperationQueue *geoLocQueue=[NSOperationQueue new];
-            SEL methodSelector=@selector(getGeoCoords::);
-            NSMethodSignature *methodSignature=[self methodSignatureForSelector:methodSelector];
-            NSInvocation *methodInvocation=[NSInvocation invocationWithMethodSignature:methodSignature];
-            [methodInvocation setTarget:self];
-            [methodInvocation setSelector:methodSelector];
-            
-            [methodInvocation setArgument:&_locationLat atIndex:2];
-            [methodInvocation setArgument:&_locationLong atIndex:3];
-            [methodInvocation retainArguments];
-            
-            NSInvocationOperation *invocationOperation=[[NSInvocationOperation alloc]initWithInvocation:methodInvocation];
-            [geoLocQueue addOperation:invocationOperation];
-            
-            [invocationOperation release];
-            [geoLocQueue release];
-        });
+        /*Check for internet availability status*/
+        internetReachability = [Reachability reachabilityForInternetConnection];
+        NetworkStatus networkStatus = [internetReachability currentReachabilityStatus];
+        
+        if(networkStatus==NotReachable)
+        {
+            UIAlertView *networkOfflineAlert=[[UIAlertView alloc]initWithTitle:@"No Internet Connection !" message:@"The internet appears offline. Could not complete the request" delegate:self cancelButtonTitle:nil otherButtonTitles:@"OK", nil];
+            [networkOfflineAlert show];
+            [networkOfflineAlert release];
+        }
+        else
+        {
+            double delayInSeconds = 0.3;
+            dispatch_time_t popTime = dispatch_time(DISPATCH_TIME_NOW, (int64_t)(delayInSeconds * NSEC_PER_SEC));
+            dispatch_after(popTime, dispatch_get_main_queue(), ^(void){
+                /*Reverse Geo-coding*/
+                NSOperationQueue *geoLocQueue=[NSOperationQueue new];
+                SEL methodSelector=@selector(getGeoCoords::);
+                NSMethodSignature *methodSignature=[self methodSignatureForSelector:methodSelector];
+                NSInvocation *methodInvocation=[NSInvocation invocationWithMethodSignature:methodSignature];
+                [methodInvocation setTarget:self];
+                [methodInvocation setSelector:methodSelector];
+                
+                [methodInvocation setArgument:&_locationLat atIndex:2];
+                [methodInvocation setArgument:&_locationLong atIndex:3];
+                [methodInvocation retainArguments];
+                
+                NSInvocationOperation *invocationOperation=[[NSInvocationOperation alloc]initWithInvocation:methodInvocation];
+                [geoLocQueue addOperation:invocationOperation];
+                
+                [invocationOperation release];
+                [geoLocQueue release];
+            });
+        }
     }
     else
     {

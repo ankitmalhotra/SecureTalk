@@ -106,6 +106,8 @@ int retypeGroupPasswordFieldCheck=0;
             [groupPasswordCheck addObject:[groupList objectAtIndex:k+2]];
             k+=2;
         }
+        //NSSortDescriptor *titleSorter= [[NSSortDescriptor alloc] initWithKey:@"a" ascending:YES];
+        //[groupNames sortUsingDescriptors:[NSArray arrayWithObject:titleSorter]];
         groupsPwdDictionary=[[NSDictionary alloc]initWithObjects:groupPasswordCheck forKeys:groupNames];
         groupsNumDictionary=[[NSDictionary alloc]initWithObjects:groupNumber forKeys:groupNames];
         [tabVw reloadData];
@@ -174,96 +176,118 @@ int retypeGroupPasswordFieldCheck=0;
                 [groupList removeAllObjects];
             }
             
-            //fetchOtherGroupsQueue=dispatch_queue_create("fetchOtherGroups", NULL);
-            dispatch_async(dispatch_get_main_queue(), ^(void){
-                [restObj showMyGroups:localUserNumber:locationLat:locationLong:localAccessToken :@"listMemberGroups"];
-            });
+            /*Check for internet availability status*/
+            internetReachability = [Reachability reachabilityForInternetConnection];
+            NetworkStatus networkStatus = [internetReachability currentReachabilityStatus];
             
-            double delayInSeconds = 4.0;
-            dispatch_time_t popTime = dispatch_time(DISPATCH_TIME_NOW, (int64_t)(delayInSeconds * NSEC_PER_SEC));
-            dispatch_after(popTime, dispatch_get_main_queue(), ^(void){
+            if(networkStatus==NotReachable)
+            {
+                UIAlertView *networkOfflineAlert=[[UIAlertView alloc]initWithTitle:@"No Internet Connection !" message:@"The internet appears offline. Could not complete the request" delegate:self cancelButtonTitle:nil otherButtonTitles:@"OK", nil];
+                [networkOfflineAlert show];
+                [networkOfflineAlert release];
                 
-                NSLog(@"calling for status from server..");
-                retval=[restObj returnValue];
-                if(retval==1)
-                {
-                    [self retrieveListOfGroups];
-                    [tabVw setUserInteractionEnabled:TRUE];
-                    [tabVw setAlpha:1.0];
-                    connProgress.hidden=TRUE;
-                    [connProgress stopAnimating];
-                    addGrp.enabled=TRUE;
-                    backToMain.enabled=TRUE;
-                    myGroups.enabled=TRUE;
-                    allGroups.enabled=TRUE;
-                }
-                else if(retval==-1)
-                {
-                    UIAlertView *createdAlert=[[UIAlertView alloc]initWithTitle:@"Could not fetch groups" message:[NSString stringWithFormat:@"Groups could not be fetched at this time"] delegate:self cancelButtonTitle:@"OK" otherButtonTitles:nil, nil];
-                    [createdAlert show];
-                    [createdAlert release];
+                [tabVw setUserInteractionEnabled:TRUE];
+                [tabVw setAlpha:1.0];
+                connProgress.hidden=TRUE;
+                [connProgress stopAnimating];
+                addGrp.enabled=TRUE;
+                backToMain.enabled=TRUE;
+                myGroups.enabled=TRUE;
+                allGroups.enabled=TRUE;
+            }
+            else
+            {
+                //fetchOtherGroupsQueue=dispatch_queue_create("fetchOtherGroups", NULL);
+                dispatch_async(dispatch_get_main_queue(), ^(void){
+                    [restObj showMyGroups:localUserNumber:locationLat:locationLong:localAccessToken :@"listMemberGroups"];
+                });
+                
+                double delayInSeconds = 4.0;
+                dispatch_time_t popTime = dispatch_time(DISPATCH_TIME_NOW, (int64_t)(delayInSeconds * NSEC_PER_SEC));
+                dispatch_after(popTime, dispatch_get_main_queue(), ^(void){
                     
-                    [tabVw setUserInteractionEnabled:TRUE];
-                    [tabVw setAlpha:1.0];
-                    connProgress.hidden=TRUE;
-                    [connProgress stopAnimating];
-                    addGrp.enabled=TRUE;
-                    backToMain.enabled=TRUE;
-                    myGroups.enabled=TRUE;
-                    allGroups.enabled=TRUE;
-                }
-                else if(retval==0)
-                {
-                    double delayInSeconds = 2.0;
-                    dispatch_time_t popTime = dispatch_time(DISPATCH_TIME_NOW, (int64_t)(delayInSeconds * NSEC_PER_SEC));
-                    dispatch_after(popTime, dispatch_get_main_queue(), ^(void){
-                        NSLog(@"slow connection. Trying again..");
-                        retval=[restObj returnValue];
-                        if(retval==1)
-                        {
-                            [self retrieveListOfGroups];
-                            [tabVw setUserInteractionEnabled:TRUE];
-                            [tabVw setAlpha:1.0];
-                            connProgress.hidden=TRUE;
-                            [connProgress stopAnimating];
-                            addGrp.enabled=TRUE;
-                            backToMain.enabled=TRUE;
-                            myGroups.enabled=TRUE;
-                            allGroups.enabled=TRUE;
-                        }
-                        else if(retval==-1)
-                        {
-                            UIAlertView *createdAlert=[[UIAlertView alloc]initWithTitle:@"Could not fetch groups" message:[NSString stringWithFormat:@"Groups could not be fetched at this time"] delegate:self cancelButtonTitle:@"OK" otherButtonTitles:nil, nil];
-                            [createdAlert show];
-                            [createdAlert release];
-                            
-                            [tabVw setUserInteractionEnabled:TRUE];
-                            [tabVw setAlpha:1.0];
-                            connProgress.hidden=TRUE;
-                            [connProgress stopAnimating];
-                            addGrp.enabled=TRUE;
-                            backToMain.enabled=TRUE;
-                            myGroups.enabled=TRUE;
-                            allGroups.enabled=TRUE;
-                        }
-                        else if(retval==0)
-                        {
-                            UIAlertView *connNullAlert=[[UIAlertView alloc]initWithTitle:@"Connection Error" message:@"Unable to contact server. Please try again." delegate:nil cancelButtonTitle:nil otherButtonTitles:@"OK", nil];
-                            [connNullAlert show];
-                            [connNullAlert release];
-                            
-                            [tabVw setUserInteractionEnabled:TRUE];
-                            [tabVw setAlpha:1.0];
-                            connProgress.hidden=TRUE;
-                            [connProgress stopAnimating];
-                            addGrp.enabled=TRUE;
-                            backToMain.enabled=TRUE;
-                            myGroups.enabled=TRUE;
-                            allGroups.enabled=TRUE;
-                        }
-                    });
-                }
-            });
+                    NSLog(@"calling for status from server..");
+                    retval=[restObj returnValue];
+                    if(retval==1)
+                    {
+                        [self retrieveListOfGroups];
+                        [tabVw setUserInteractionEnabled:TRUE];
+                        [tabVw setAlpha:1.0];
+                        connProgress.hidden=TRUE;
+                        [connProgress stopAnimating];
+                        addGrp.enabled=TRUE;
+                        backToMain.enabled=TRUE;
+                        myGroups.enabled=TRUE;
+                        allGroups.enabled=TRUE;
+                    }
+                    else if(retval==-1)
+                    {
+                        UIAlertView *createdAlert=[[UIAlertView alloc]initWithTitle:@"Could not fetch groups" message:[NSString stringWithFormat:@"Groups could not be fetched at this time"] delegate:self cancelButtonTitle:@"OK" otherButtonTitles:nil, nil];
+                        [createdAlert show];
+                        [createdAlert release];
+                        
+                        [tabVw setUserInteractionEnabled:TRUE];
+                        [tabVw setAlpha:1.0];
+                        connProgress.hidden=TRUE;
+                        [connProgress stopAnimating];
+                        addGrp.enabled=TRUE;
+                        backToMain.enabled=TRUE;
+                        myGroups.enabled=TRUE;
+                        allGroups.enabled=TRUE;
+                    }
+                    else if(retval==0)
+                    {
+                        double delayInSeconds = 2.0;
+                        dispatch_time_t popTime = dispatch_time(DISPATCH_TIME_NOW, (int64_t)(delayInSeconds * NSEC_PER_SEC));
+                        dispatch_after(popTime, dispatch_get_main_queue(), ^(void){
+                            NSLog(@"slow connection. Trying again..");
+                            retval=[restObj returnValue];
+                            if(retval==1)
+                            {
+                                [self retrieveListOfGroups];
+                                [tabVw setUserInteractionEnabled:TRUE];
+                                [tabVw setAlpha:1.0];
+                                connProgress.hidden=TRUE;
+                                [connProgress stopAnimating];
+                                addGrp.enabled=TRUE;
+                                backToMain.enabled=TRUE;
+                                myGroups.enabled=TRUE;
+                                allGroups.enabled=TRUE;
+                            }
+                            else if(retval==-1)
+                            {
+                                UIAlertView *createdAlert=[[UIAlertView alloc]initWithTitle:@"Could not fetch groups" message:[NSString stringWithFormat:@"Groups could not be fetched at this time"] delegate:self cancelButtonTitle:@"OK" otherButtonTitles:nil, nil];
+                                [createdAlert show];
+                                [createdAlert release];
+                                
+                                [tabVw setUserInteractionEnabled:TRUE];
+                                [tabVw setAlpha:1.0];
+                                connProgress.hidden=TRUE;
+                                [connProgress stopAnimating];
+                                addGrp.enabled=TRUE;
+                                backToMain.enabled=TRUE;
+                                myGroups.enabled=TRUE;
+                                allGroups.enabled=TRUE;
+                            }
+                            else if(retval==0)
+                            {
+                                UIAlertView *connNullAlert=[[UIAlertView alloc]initWithTitle:@"Connection Error" message:@"Unable to contact server. Please try again." delegate:nil cancelButtonTitle:nil otherButtonTitles:@"OK", nil];
+                                [connNullAlert show];
+                                [connNullAlert release];
+                                
+                                [tabVw setUserInteractionEnabled:TRUE];
+                                [tabVw setAlpha:1.0];
+                                connProgress.hidden=TRUE;
+                                [connProgress stopAnimating];
+                                addGrp.enabled=TRUE;
+                                backToMain.enabled=TRUE;
+                                myGroups.enabled=TRUE;
+                                allGroups.enabled=TRUE;
+                            }
+                        });
+                    }
+                });
+            }
         }
         else if (allGroupsCheck==1)
         {
@@ -281,23 +305,60 @@ int retypeGroupPasswordFieldCheck=0;
                 [groupList removeAllObjects];
             }
             
-            //fetchMyGroupsQueue=dispatch_queue_create("fetchMyGroups", NULL);
-            dispatch_async(dispatch_get_main_queue(), ^(void){
-                [restObj showAllGroups:localUserNumber :locationLat :locationLong :localAccessToken :@"showGroups"];
-            });
+            /*Check for internet availability status*/
+            internetReachability = [Reachability reachabilityForInternetConnection];
+            NetworkStatus networkStatus = [internetReachability currentReachabilityStatus];
             
-            double delayInSeconds = 4.0;
-            dispatch_time_t popTime = dispatch_time(DISPATCH_TIME_NOW, (int64_t)(delayInSeconds *NSEC_PER_SEC));
-            dispatch_after(popTime, dispatch_get_main_queue(), ^(void){
+            if(networkStatus==NotReachable)
+            {
+                UIAlertView *networkOfflineAlert=[[UIAlertView alloc]initWithTitle:@"No Internet Connection !" message:@"The internet appears offline. Could not complete the request" delegate:self cancelButtonTitle:nil otherButtonTitles:@"OK", nil];
+                [networkOfflineAlert show];
+                [networkOfflineAlert release];
                 
-                NSLog(@"calling for status from server..");
-                retval=[restObj returnValue];
-                if(retval==1)
-                {
-                    double delayInSeconds = 0.3;
-                    dispatch_time_t popTime = dispatch_time(DISPATCH_TIME_NOW, (int64_t)(delayInSeconds * NSEC_PER_SEC));
-                    dispatch_after(popTime, dispatch_get_main_queue(), ^(void){
-                        [self retrieveListOfGroups];
+                [tabVw setUserInteractionEnabled:TRUE];
+                [tabVw setAlpha:1.0];
+                connProgress.hidden=TRUE;
+                [connProgress stopAnimating];
+                addGrp.enabled=TRUE;
+                backToMain.enabled=TRUE;
+                myGroups.enabled=TRUE;
+                allGroups.enabled=TRUE;
+            }
+            else
+            {
+                //fetchMyGroupsQueue=dispatch_queue_create("fetchMyGroups", NULL);
+                dispatch_async(dispatch_get_main_queue(), ^(void){
+                    [restObj showAllGroups:localUserNumber :locationLat :locationLong :localAccessToken :@"showGroups"];
+                });
+                
+                double delayInSeconds = 4.0;
+                dispatch_time_t popTime = dispatch_time(DISPATCH_TIME_NOW, (int64_t)(delayInSeconds *NSEC_PER_SEC));
+                dispatch_after(popTime, dispatch_get_main_queue(), ^(void){
+                    
+                    NSLog(@"calling for status from server..");
+                    retval=[restObj returnValue];
+                    if(retval==1)
+                    {
+                        double delayInSeconds = 0.3;
+                        dispatch_time_t popTime = dispatch_time(DISPATCH_TIME_NOW, (int64_t)(delayInSeconds * NSEC_PER_SEC));
+                        dispatch_after(popTime, dispatch_get_main_queue(), ^(void){
+                            [self retrieveListOfGroups];
+                            [tabVw setUserInteractionEnabled:TRUE];
+                            [tabVw setAlpha:1.0];
+                            connProgress.hidden=TRUE;
+                            [connProgress stopAnimating];
+                            addGrp.enabled=TRUE;
+                            backToMain.enabled=TRUE;
+                            myGroups.enabled=TRUE;
+                            allGroups.enabled=TRUE;
+                        });
+                    }
+                    else if(retval==-1)
+                    {
+                        UIAlertView *createdAlert=[[UIAlertView alloc]initWithTitle:@"Could not fetch groups" message:[NSString stringWithFormat:@"Groups could not be fetched for you at this time"] delegate:self cancelButtonTitle:@"OK" otherButtonTitles:nil, nil];
+                        [createdAlert show];
+                        [createdAlert release];
+                        
                         [tabVw setUserInteractionEnabled:TRUE];
                         [tabVw setAlpha:1.0];
                         connProgress.hidden=TRUE;
@@ -306,37 +367,37 @@ int retypeGroupPasswordFieldCheck=0;
                         backToMain.enabled=TRUE;
                         myGroups.enabled=TRUE;
                         allGroups.enabled=TRUE;
-                    });
-                }
-                else if(retval==-1)
-                {
-                    UIAlertView *createdAlert=[[UIAlertView alloc]initWithTitle:@"Could not fetch groups" message:[NSString stringWithFormat:@"Groups could not be fetched for you at this time"] delegate:self cancelButtonTitle:@"OK" otherButtonTitles:nil, nil];
-                    [createdAlert show];
-                    [createdAlert release];
-                    
-                    [tabVw setUserInteractionEnabled:TRUE];
-                    [tabVw setAlpha:1.0];
-                    connProgress.hidden=TRUE;
-                    [connProgress stopAnimating];
-                    addGrp.enabled=TRUE;
-                    backToMain.enabled=TRUE;
-                    myGroups.enabled=TRUE;
-                    allGroups.enabled=TRUE;
-                }
-                else if(retval==0)
-                {
-                    double delayInSeconds = 2.0;
-                    dispatch_time_t popTime = dispatch_time(DISPATCH_TIME_NOW, (int64_t)(delayInSeconds *NSEC_PER_SEC));
-                    dispatch_after(popTime, dispatch_get_main_queue(), ^(void){
-                        
-                        NSLog(@"slow connection. Trying again..");
-                        retval=[restObj returnValue];
-                        if(retval==1)
-                        {
-                            double delayInSeconds = 0.3;
-                            dispatch_time_t popTime = dispatch_time(DISPATCH_TIME_NOW, (int64_t)(delayInSeconds * NSEC_PER_SEC));
-                            dispatch_after(popTime, dispatch_get_main_queue(), ^(void){
-                                [self retrieveListOfGroups];
+                    }
+                    else if(retval==0)
+                    {
+                        double delayInSeconds = 2.0;
+                        dispatch_time_t popTime = dispatch_time(DISPATCH_TIME_NOW, (int64_t)(delayInSeconds *NSEC_PER_SEC));
+                        dispatch_after(popTime, dispatch_get_main_queue(), ^(void){
+                            
+                            NSLog(@"slow connection. Trying again..");
+                            retval=[restObj returnValue];
+                            if(retval==1)
+                            {
+                                double delayInSeconds = 0.3;
+                                dispatch_time_t popTime = dispatch_time(DISPATCH_TIME_NOW, (int64_t)(delayInSeconds * NSEC_PER_SEC));
+                                dispatch_after(popTime, dispatch_get_main_queue(), ^(void){
+                                    [self retrieveListOfGroups];
+                                    [tabVw setUserInteractionEnabled:TRUE];
+                                    [tabVw setAlpha:1.0];
+                                    connProgress.hidden=TRUE;
+                                    [connProgress stopAnimating];
+                                    addGrp.enabled=TRUE;
+                                    backToMain.enabled=TRUE;
+                                    myGroups.enabled=TRUE;
+                                    allGroups.enabled=TRUE;
+                                });
+                            }
+                            else if(retval==-1)
+                            {
+                                UIAlertView *createdAlert=[[UIAlertView alloc]initWithTitle:@"Could not fetch groups" message:[NSString stringWithFormat:@"Groups could not be fetched for you at this time"] delegate:self cancelButtonTitle:@"OK" otherButtonTitles:nil, nil];
+                                [createdAlert show];
+                                [createdAlert release];
+                                
                                 [tabVw setUserInteractionEnabled:TRUE];
                                 [tabVw setAlpha:1.0];
                                 connProgress.hidden=TRUE;
@@ -345,41 +406,26 @@ int retypeGroupPasswordFieldCheck=0;
                                 backToMain.enabled=TRUE;
                                 myGroups.enabled=TRUE;
                                 allGroups.enabled=TRUE;
-                            });
-                        }
-                        else if(retval==-1)
-                        {
-                            UIAlertView *createdAlert=[[UIAlertView alloc]initWithTitle:@"Could not fetch groups" message:[NSString stringWithFormat:@"Groups could not be fetched for you at this time"] delegate:self cancelButtonTitle:@"OK" otherButtonTitles:nil, nil];
-                            [createdAlert show];
-                            [createdAlert release];
-                            
-                            [tabVw setUserInteractionEnabled:TRUE];
-                            [tabVw setAlpha:1.0];
-                            connProgress.hidden=TRUE;
-                            [connProgress stopAnimating];
-                            addGrp.enabled=TRUE;
-                            backToMain.enabled=TRUE;
-                            myGroups.enabled=TRUE;
-                            allGroups.enabled=TRUE;
-                        }
-                        else if(retval==0)
-                        {
-                            UIAlertView *connNullAlert=[[UIAlertView alloc]initWithTitle:@"Connection Error" message:@"Unable to contact server. Please try again." delegate:nil cancelButtonTitle:nil otherButtonTitles:@"OK", nil];
-                            [connNullAlert show];
-                            [connNullAlert release];
-                            
-                            [tabVw setUserInteractionEnabled:TRUE];
-                            [tabVw setAlpha:1.0];
-                            connProgress.hidden=TRUE;
-                            [connProgress stopAnimating];
-                            addGrp.enabled=TRUE;
-                            backToMain.enabled=TRUE;
-                            myGroups.enabled=TRUE;
-                            allGroups.enabled=TRUE;
-                        }
-                    });
-                }
-            });
+                            }
+                            else if(retval==0)
+                            {
+                                UIAlertView *connNullAlert=[[UIAlertView alloc]initWithTitle:@"Connection Error" message:@"Unable to contact server. Please try again." delegate:nil cancelButtonTitle:nil otherButtonTitles:@"OK", nil];
+                                [connNullAlert show];
+                                [connNullAlert release];
+                                
+                                [tabVw setUserInteractionEnabled:TRUE];
+                                [tabVw setAlpha:1.0];
+                                connProgress.hidden=TRUE;
+                                [connProgress stopAnimating];
+                                addGrp.enabled=TRUE;
+                                backToMain.enabled=TRUE;
+                                myGroups.enabled=TRUE;
+                                allGroups.enabled=TRUE;
+                            }
+                        });
+                    }
+                });
+            }
         }
         [tabVw reloadData];
     });
@@ -877,61 +923,82 @@ int retypeGroupPasswordFieldCheck=0;
                 [tabVw setAlpha:1.0];
             }];
             
-            dispatch_async(dispatch_get_main_queue(), ^{
-                [restObj createGroup :locationLat :locationLong :newGroupName :localUserNumber :newGroupPwd :localAccessToken :@"addGroup"];
-            });
+            /*Check for internet availability status*/
+            internetReachability = [Reachability reachabilityForInternetConnection];
+            NetworkStatus networkStatus = [internetReachability currentReachabilityStatus];
             
-            double delayInSeconds = 3.0;
-            dispatch_time_t popTime = dispatch_time(DISPATCH_TIME_NOW, (int64_t)(delayInSeconds * NSEC_PER_SEC));
-            dispatch_after(popTime, dispatch_get_main_queue(), ^(void){
-                NSLog(@"calling for status from server..");
-                retval=[restObj returnValue];
-                if(retval==1)
-                {
-                    UIAlertView *createdAlert=[[UIAlertView alloc]initWithTitle:@"Success" message:[NSString stringWithFormat:@"New Group Successfully created"] delegate:self cancelButtonTitle:nil otherButtonTitles:@"OK", nil];
-                    [createdAlert show];
-                    [createdAlert release];
-                    
-                    addGrp.enabled=TRUE;
-                    backToMain.enabled=TRUE;
-                    [tabVw setUserInteractionEnabled:TRUE];
-                    myGroups.enabled=TRUE;
-                    allGroups.enabled=TRUE;
-                    connProgress.hidden=TRUE;
-                    [connProgress stopAnimating];
-                    
-                    [self refreshUI];
-                }
-                else if(retval==-1)
-                {
-                    UIAlertView *createdAlert=[[UIAlertView alloc]initWithTitle:@"Failed" message:[NSString stringWithFormat:@"New Group could not be created"] delegate:self cancelButtonTitle:nil otherButtonTitles:@"OK", nil];
-                    [createdAlert show];
-                    [createdAlert release];
-                    
-                    addGrp.enabled=TRUE;
-                    backToMain.enabled=TRUE;
-                    [tabVw setUserInteractionEnabled:TRUE];
-                    myGroups.enabled=TRUE;
-                    allGroups.enabled=TRUE;
-                    connProgress.hidden=TRUE;
-                    [connProgress stopAnimating];
-                }
-                else if(retval==0)
-                {
-                    UIAlertView *connNullAlert=[[UIAlertView alloc]initWithTitle:@"Connection Error" message:@"Unable to contact server. Please try again." delegate:nil cancelButtonTitle:nil otherButtonTitles:@"OK", nil];
-                    [connNullAlert show];
-                    [connNullAlert release];
-                    
-                    addGrp.enabled=TRUE;
-                    backToMain.enabled=TRUE;
-                    [tabVw setUserInteractionEnabled:TRUE];
-                    myGroups.enabled=TRUE;
-                    allGroups.enabled=TRUE;
-                    connProgress.hidden=TRUE;
-                    [connProgress stopAnimating];
-                }
-            });
-            
+            if(networkStatus==NotReachable)
+            {
+                UIAlertView *networkOfflineAlert=[[UIAlertView alloc]initWithTitle:@"No Internet Connection !" message:@"The internet appears offline. Could not complete the request" delegate:self cancelButtonTitle:nil otherButtonTitles:@"OK", nil];
+                [networkOfflineAlert show];
+                [networkOfflineAlert release];
+                
+                [tabVw setUserInteractionEnabled:TRUE];
+                [tabVw setAlpha:1.0];
+                connProgress.hidden=TRUE;
+                [connProgress stopAnimating];
+                addGrp.enabled=TRUE;
+                backToMain.enabled=TRUE;
+                myGroups.enabled=TRUE;
+                allGroups.enabled=TRUE;
+            }
+            else
+            {
+                dispatch_async(dispatch_get_main_queue(), ^{
+                    [restObj createGroup :locationLat :locationLong :newGroupName :localUserNumber :newGroupPwd :localAccessToken :@"addGroup"];
+                });
+                
+                double delayInSeconds = 3.0;
+                dispatch_time_t popTime = dispatch_time(DISPATCH_TIME_NOW, (int64_t)(delayInSeconds * NSEC_PER_SEC));
+                dispatch_after(popTime, dispatch_get_main_queue(), ^(void){
+                    NSLog(@"calling for status from server..");
+                    retval=[restObj returnValue];
+                    if(retval==1)
+                    {
+                        UIAlertView *createdAlert=[[UIAlertView alloc]initWithTitle:@"Success" message:[NSString stringWithFormat:@"New Group Successfully created"] delegate:self cancelButtonTitle:nil otherButtonTitles:@"OK", nil];
+                        [createdAlert show];
+                        [createdAlert release];
+                        
+                        addGrp.enabled=TRUE;
+                        backToMain.enabled=TRUE;
+                        [tabVw setUserInteractionEnabled:TRUE];
+                        myGroups.enabled=TRUE;
+                        allGroups.enabled=TRUE;
+                        connProgress.hidden=TRUE;
+                        [connProgress stopAnimating];
+                        
+                        [self refreshUI];
+                    }
+                    else if(retval==-1)
+                    {
+                        UIAlertView *createdAlert=[[UIAlertView alloc]initWithTitle:@"Failed" message:[NSString stringWithFormat:@"New Group could not be created"] delegate:self cancelButtonTitle:nil otherButtonTitles:@"OK", nil];
+                        [createdAlert show];
+                        [createdAlert release];
+                        
+                        addGrp.enabled=TRUE;
+                        backToMain.enabled=TRUE;
+                        [tabVw setUserInteractionEnabled:TRUE];
+                        myGroups.enabled=TRUE;
+                        allGroups.enabled=TRUE;
+                        connProgress.hidden=TRUE;
+                        [connProgress stopAnimating];
+                    }
+                    else if(retval==0)
+                    {
+                        UIAlertView *connNullAlert=[[UIAlertView alloc]initWithTitle:@"Connection Error" message:@"Unable to contact server. Please try again." delegate:nil cancelButtonTitle:nil otherButtonTitles:@"OK", nil];
+                        [connNullAlert show];
+                        [connNullAlert release];
+                        
+                        addGrp.enabled=TRUE;
+                        backToMain.enabled=TRUE;
+                        [tabVw setUserInteractionEnabled:TRUE];
+                        myGroups.enabled=TRUE;
+                        allGroups.enabled=TRUE;
+                        connProgress.hidden=TRUE;
+                        [connProgress stopAnimating];
+                    }
+                });
+            }
         }
     }
 }
@@ -987,14 +1054,171 @@ int retypeGroupPasswordFieldCheck=0;
             }
             else
             {
-                 dispatch_async(dispatch_get_main_queue(), ^{
-                    [restObj joinGroup:localUserNumber :groupNumber :locationLat :locationLong :NULL :localAccessToken :@"joinGroup"];
-                 });
+                /*Check for internet availability status*/
+                internetReachability = [Reachability reachabilityForInternetConnection];
+                NetworkStatus networkStatus = [internetReachability currentReachabilityStatus];
+                
+                if(networkStatus==NotReachable)
+                {
+                    UIAlertView *networkOfflineAlert=[[UIAlertView alloc]initWithTitle:@"No Internet Connection !" message:@"The internet appears offline. Could not complete the request" delegate:self cancelButtonTitle:nil otherButtonTitles:@"OK", nil];
+                    [networkOfflineAlert show];
+                    [networkOfflineAlert release];
+                    
+                    [tabVw setUserInteractionEnabled:TRUE];
+                    [tabVw setAlpha:1.0];
+                    connProgress.hidden=TRUE;
+                    [connProgress stopAnimating];
+                    addGrp.enabled=TRUE;
+                    backToMain.enabled=TRUE;
+                    myGroups.enabled=TRUE;
+                    allGroups.enabled=TRUE;
+                }
+                else
+                {
+                    dispatch_async(dispatch_get_main_queue(), ^{
+                        [restObj joinGroup:localUserNumber :groupNumber :locationLat :locationLong :NULL :localAccessToken :@"joinGroup"];
+                    });
+                    
+                    double delayInSeconds = 4.0;
+                    dispatch_time_t popTime = dispatch_time(DISPATCH_TIME_NOW, (int64_t)(delayInSeconds * NSEC_PER_SEC));
+                    dispatch_after(popTime, dispatch_get_main_queue(), ^(void){
+                        NSLog(@"calling for status from server..");
+                        retval=[restObj returnValue];
+                        if(retval==1)
+                        {
+                            [mainViewObj setSelectedGroupName:selectedGroupName];
+                            [mainViewObj setSelectedGroupNum:[groupsNumDictionary objectForKey:selectedGroupName]];
+                            [mainViewObj setPostsRefreshSignal];
+                            [mainViewObj clearBufferList];
+                            [mainViewObj clearAllPosts];
+                            
+                            addGrp.enabled=TRUE;
+                            backToMain.enabled=TRUE;
+                            [tabVw setUserInteractionEnabled:TRUE];
+                            myGroups.enabled=TRUE;
+                            allGroups.enabled=TRUE;
+                            [connProgress stopAnimating];
+                            connProgress.hidden=TRUE;
+                            
+                            [self dismissViewControllerAnimated:YES completion:NULL];
+                        }
+                        else if(retval==-1)
+                        {
+                            UIAlertView *createdAlert=[[UIAlertView alloc]initWithTitle:@"Group Join Failed" message:[NSString stringWithFormat:@"Please enter the correct group password."] delegate:self cancelButtonTitle:@"OK" otherButtonTitles:nil, nil];
+                            [createdAlert show];
+                            [createdAlert release];
+                            
+                            addGrp.enabled=TRUE;
+                            backToMain.enabled=TRUE;
+                            [tabVw setUserInteractionEnabled:TRUE];
+                            [tabVw setAlpha:1.0];
+                            myGroups.enabled=TRUE;
+                            allGroups.enabled=TRUE;
+                            [connProgress stopAnimating];
+                            connProgress.hidden=TRUE;
+                        }
+                        else if(retval==0)
+                        {
+                            double delayInSeconds = 2.0;
+                            dispatch_time_t popTime = dispatch_time(DISPATCH_TIME_NOW, (int64_t)(delayInSeconds * NSEC_PER_SEC));
+                            dispatch_after(popTime, dispatch_get_main_queue(), ^(void){
+                                retval=[restObj returnValue];
+                                if(retval==1)
+                                {
+                                    [mainViewObj setSelectedGroupName:selectedGroupName];
+                                    [mainViewObj setSelectedGroupNum:[groupsNumDictionary objectForKey:selectedGroupName]];
+                                    [mainViewObj setPostsRefreshSignal];
+                                    [mainViewObj clearBufferList];
+                                    [mainViewObj clearAllPosts];
+                                    
+                                    addGrp.enabled=TRUE;
+                                    backToMain.enabled=TRUE;
+                                    [tabVw setUserInteractionEnabled:TRUE];
+                                    myGroups.enabled=TRUE;
+                                    allGroups.enabled=TRUE;
+                                    [connProgress stopAnimating];
+                                    connProgress.hidden=TRUE;
+                                    
+                                    [self dismissViewControllerAnimated:YES completion:NULL];
+                                }
+                                else if(retval==-1)
+                                {
+                                    UIAlertView *createdAlert=[[UIAlertView alloc]initWithTitle:@"Group Join Failed" message:[NSString stringWithFormat:@"Could not join the group"] delegate:self cancelButtonTitle:@"OK" otherButtonTitles:nil, nil];
+                                    [createdAlert show];
+                                    [createdAlert release];
+                                    
+                                    addGrp.enabled=TRUE;
+                                    backToMain.enabled=TRUE;
+                                    [tabVw setUserInteractionEnabled:TRUE];
+                                    [tabVw setAlpha:1.0];
+                                    myGroups.enabled=TRUE;
+                                    allGroups.enabled=TRUE;
+                                    [connProgress stopAnimating];
+                                    connProgress.hidden=TRUE;
+                                }
+                                else
+                                {
+                                    UIAlertView *connNullAlert=[[UIAlertView alloc]initWithTitle:@"Connection Error" message:@"Unable to contact server. Please try again." delegate:nil cancelButtonTitle:@"Ok" otherButtonTitles:nil, nil];
+                                    [connNullAlert show];
+                                    [connNullAlert release];
+                                    
+                                    addGrp.enabled=TRUE;
+                                    backToMain.enabled=TRUE;
+                                    [tabVw setUserInteractionEnabled:TRUE];
+                                    [tabVw setAlpha:1.0];
+                                    myGroups.enabled=TRUE;
+                                    allGroups.enabled=TRUE;
+                                    [connProgress stopAnimating];
+                                    connProgress.hidden=TRUE;
+                                }
+                            });
+                        }
+                    });
+                }
+            }
+            /*
+            double delayInSeconds = 2.0;
+            dispatch_time_t popTime = dispatch_time(DISPATCH_TIME_NOW, (int64_t)(delayInSeconds * NSEC_PER_SEC));
+            dispatch_after(popTime, dispatch_get_main_queue(), ^(void){
+             
+            });
+             */
+        }
+        else if ([alertViewOld.title isEqualToString:@"Group Password"])
+        {
+            groupJoinPwd=[enterPasswordAlert textFieldAtIndex:0].text;
+            NSLog(@"Joining group:%@ with password:%@",groupNumber,groupJoinPwd);
+            
+            /*Check for internet availability status*/
+            internetReachability = [Reachability reachabilityForInternetConnection];
+            NetworkStatus networkStatus = [internetReachability currentReachabilityStatus];
+            
+            if(networkStatus==NotReachable)
+            {
+                UIAlertView *networkOfflineAlert=[[UIAlertView alloc]initWithTitle:@"No Internet Connection !" message:@"The internet appears offline. Could not complete the request" delegate:self cancelButtonTitle:nil otherButtonTitles:@"OK", nil];
+                [networkOfflineAlert show];
+                [networkOfflineAlert release];
+                
+                [tabVw setUserInteractionEnabled:TRUE];
+                [tabVw setAlpha:1.0];
+                connProgress.hidden=TRUE;
+                [connProgress stopAnimating];
+                addGrp.enabled=TRUE;
+                backToMain.enabled=TRUE;
+                myGroups.enabled=TRUE;
+                allGroups.enabled=TRUE;
+            }
+            else
+            {
+                retval=0;
+                restObj=[[messengerRESTclient alloc]init];
+                dispatch_async(dispatch_get_main_queue(), ^{
+                    [restObj joinGroup:localUserNumber :groupNumber :locationLat :locationLong :groupJoinPwd :localAccessToken :@"joinGroup"];
+                });
                 
                 double delayInSeconds = 4.0;
                 dispatch_time_t popTime = dispatch_time(DISPATCH_TIME_NOW, (int64_t)(delayInSeconds * NSEC_PER_SEC));
                 dispatch_after(popTime, dispatch_get_main_queue(), ^(void){
-                    NSLog(@"calling for status from server..");
                     retval=[restObj returnValue];
                     if(retval==1)
                     {
@@ -1016,7 +1240,7 @@ int retypeGroupPasswordFieldCheck=0;
                     }
                     else if(retval==-1)
                     {
-                        UIAlertView *createdAlert=[[UIAlertView alloc]initWithTitle:@"Group Join Failed" message:[NSString stringWithFormat:@"Please enter the correct group password."] delegate:self cancelButtonTitle:@"OK" otherButtonTitles:nil, nil];
+                        UIAlertView *createdAlert=[[UIAlertView alloc]initWithTitle:@"Group Join Failed" message:[NSString stringWithFormat:@"Could not join the group"] delegate:self cancelButtonTitle:@"OK" otherButtonTitles:nil, nil];
                         [createdAlert show];
                         [createdAlert release];
                         
@@ -1087,119 +1311,6 @@ int retypeGroupPasswordFieldCheck=0;
                     }
                 });
             }
-            /*
-            double delayInSeconds = 2.0;
-            dispatch_time_t popTime = dispatch_time(DISPATCH_TIME_NOW, (int64_t)(delayInSeconds * NSEC_PER_SEC));
-            dispatch_after(popTime, dispatch_get_main_queue(), ^(void){
-             
-            });
-             */
-        }
-        else if ([alertViewOld.title isEqualToString:@"Group Password"])
-        {
-            groupJoinPwd=[enterPasswordAlert textFieldAtIndex:0].text;
-            NSLog(@"Joining group:%@ with password:%@",groupNumber,groupJoinPwd);
-            
-            retval=0;
-            restObj=[[messengerRESTclient alloc]init];
-            dispatch_async(dispatch_get_main_queue(), ^{
-                [restObj joinGroup:localUserNumber :groupNumber :locationLat :locationLong :groupJoinPwd :localAccessToken :@"joinGroup"];
-            });
-            
-            double delayInSeconds = 4.0;
-            dispatch_time_t popTime = dispatch_time(DISPATCH_TIME_NOW, (int64_t)(delayInSeconds * NSEC_PER_SEC));
-            dispatch_after(popTime, dispatch_get_main_queue(), ^(void){
-                retval=[restObj returnValue];
-                if(retval==1)
-                {
-                    [mainViewObj setSelectedGroupName:selectedGroupName];
-                    [mainViewObj setSelectedGroupNum:[groupsNumDictionary objectForKey:selectedGroupName]];
-                    [mainViewObj setPostsRefreshSignal];
-                    [mainViewObj clearBufferList];
-                    [mainViewObj clearAllPosts];
-                    
-                    addGrp.enabled=TRUE;
-                    backToMain.enabled=TRUE;
-                    [tabVw setUserInteractionEnabled:TRUE];
-                    myGroups.enabled=TRUE;
-                    allGroups.enabled=TRUE;
-                    [connProgress stopAnimating];
-                    connProgress.hidden=TRUE;
-                    
-                    [self dismissViewControllerAnimated:YES completion:NULL];
-                }
-                else if(retval==-1)
-                {
-                    UIAlertView *createdAlert=[[UIAlertView alloc]initWithTitle:@"Group Join Failed" message:[NSString stringWithFormat:@"Could not join the group"] delegate:self cancelButtonTitle:@"OK" otherButtonTitles:nil, nil];
-                    [createdAlert show];
-                    [createdAlert release];
-                    
-                    addGrp.enabled=TRUE;
-                    backToMain.enabled=TRUE;
-                    [tabVw setUserInteractionEnabled:TRUE];
-                    [tabVw setAlpha:1.0];
-                    myGroups.enabled=TRUE;
-                    allGroups.enabled=TRUE;
-                    [connProgress stopAnimating];
-                    connProgress.hidden=TRUE;
-                }
-                else if(retval==0)
-                {
-                    double delayInSeconds = 2.0;
-                    dispatch_time_t popTime = dispatch_time(DISPATCH_TIME_NOW, (int64_t)(delayInSeconds * NSEC_PER_SEC));
-                    dispatch_after(popTime, dispatch_get_main_queue(), ^(void){
-                        retval=[restObj returnValue];
-                        if(retval==1)
-                        {
-                            [mainViewObj setSelectedGroupName:selectedGroupName];
-                            [mainViewObj setSelectedGroupNum:[groupsNumDictionary objectForKey:selectedGroupName]];
-                            [mainViewObj setPostsRefreshSignal];
-                            [mainViewObj clearBufferList];
-                            [mainViewObj clearAllPosts];
-                            
-                            addGrp.enabled=TRUE;
-                            backToMain.enabled=TRUE;
-                            [tabVw setUserInteractionEnabled:TRUE];
-                            myGroups.enabled=TRUE;
-                            allGroups.enabled=TRUE;
-                            [connProgress stopAnimating];
-                            connProgress.hidden=TRUE;
-                            
-                            [self dismissViewControllerAnimated:YES completion:NULL];
-                        }
-                        else if(retval==-1)
-                        {
-                            UIAlertView *createdAlert=[[UIAlertView alloc]initWithTitle:@"Group Join Failed" message:[NSString stringWithFormat:@"Could not join the group"] delegate:self cancelButtonTitle:@"OK" otherButtonTitles:nil, nil];
-                            [createdAlert show];
-                            [createdAlert release];
-                            
-                            addGrp.enabled=TRUE;
-                            backToMain.enabled=TRUE;
-                            [tabVw setUserInteractionEnabled:TRUE];
-                            [tabVw setAlpha:1.0];
-                            myGroups.enabled=TRUE;
-                            allGroups.enabled=TRUE;
-                            [connProgress stopAnimating];
-                            connProgress.hidden=TRUE;
-                        }
-                        else
-                        {
-                            UIAlertView *connNullAlert=[[UIAlertView alloc]initWithTitle:@"Connection Error" message:@"Unable to contact server. Please try again." delegate:nil cancelButtonTitle:@"Ok" otherButtonTitles:nil, nil];
-                            [connNullAlert show];
-                            [connNullAlert release];
-                            
-                            addGrp.enabled=TRUE;
-                            backToMain.enabled=TRUE;
-                            [tabVw setUserInteractionEnabled:TRUE];
-                            [tabVw setAlpha:1.0];
-                            myGroups.enabled=TRUE;
-                            allGroups.enabled=TRUE;
-                            [connProgress stopAnimating];
-                            connProgress.hidden=TRUE;
-                        }
-                    });
-                }
-            });
         }
         
         else if ([alertViewOld.title isEqualToString:@"Leave Group ?"])
@@ -1382,99 +1493,121 @@ int retypeGroupPasswordFieldCheck=0;
                             [tabVw setAlpha:1.0];
                         }];
                         
-                        dispatch_async(dispatch_get_main_queue(), ^{
-                            [restObj createGroup :locationLat :locationLong :newGroupName :localUserNumber :newGroupPwd :localAccessToken :@"addGroup"];
-                        });
+                        /*Check for internet availability status*/
+                        internetReachability = [Reachability reachabilityForInternetConnection];
+                        NetworkStatus networkStatus = [internetReachability currentReachabilityStatus];
                         
-                        double delayInSeconds = 4.0;
-                        dispatch_time_t popTime = dispatch_time(DISPATCH_TIME_NOW, (int64_t)(delayInSeconds * NSEC_PER_SEC));
-                        dispatch_after(popTime, dispatch_get_main_queue(), ^(void){
-                            NSLog(@"calling for status from server..");
-                            retval=[restObj returnValue];
-                            if(retval==1)
-                            {
-                                UIAlertView *createdAlert=[[UIAlertView alloc]initWithTitle:@"Success" message:[NSString stringWithFormat:@"New Group Successfully created"] delegate:self cancelButtonTitle:nil otherButtonTitles:@"OK", nil];
-                                [createdAlert show];
-                                [createdAlert release];
-                                
-                                addGrp.enabled=TRUE;
-                                backToMain.enabled=TRUE;
-                                [tabVw setUserInteractionEnabled:TRUE];
-                                myGroups.enabled=TRUE;
-                                allGroups.enabled=TRUE;
-                                connProgress.hidden=TRUE;
-                                [connProgress stopAnimating];
-                                
-                                [self refreshUI];
-                            }
-                            else if(retval==-1)
-                            {
-                                UIAlertView *createdAlert=[[UIAlertView alloc]initWithTitle:@"Failed" message:[NSString stringWithFormat:@"New Group could not be created. Please try again"] delegate:self cancelButtonTitle:nil otherButtonTitles:@"OK", nil];
-                                [createdAlert show];
-                                [createdAlert release];
-                                
-                                addGrp.enabled=TRUE;
-                                backToMain.enabled=TRUE;
-                                [tabVw setUserInteractionEnabled:TRUE];
-                                myGroups.enabled=TRUE;
-                                allGroups.enabled=TRUE;
-                                connProgress.hidden=TRUE;
-                                [connProgress stopAnimating];
-                            }
-                            else if(retval==0)
-                            {
-                                double delayInSeconds = 2.0;
-                                dispatch_time_t popTime = dispatch_time(DISPATCH_TIME_NOW, (int64_t)(delayInSeconds * NSEC_PER_SEC));
-                                dispatch_after(popTime, dispatch_get_main_queue(), ^(void){
-                                    NSLog(@"calling for status from server..");
-                                    retval=[restObj returnValue];
-                                    if(retval==1)
-                                    {
-                                        UIAlertView *createdAlert=[[UIAlertView alloc]initWithTitle:@"Success" message:[NSString stringWithFormat:@"New Group Successfully created"] delegate:self cancelButtonTitle:nil otherButtonTitles:@"OK", nil];
-                                        [createdAlert show];
-                                        [createdAlert release];
-                                        
-                                        addGrp.enabled=TRUE;
-                                        backToMain.enabled=TRUE;
-                                        [tabVw setUserInteractionEnabled:TRUE];
-                                        myGroups.enabled=TRUE;
-                                        allGroups.enabled=TRUE;
-                                        connProgress.hidden=TRUE;
-                                        [connProgress stopAnimating];
-                                        
-                                        [self refreshUI];
-                                    }
-                                    else if(retval==-1)
-                                    {
-                                        UIAlertView *createdAlert=[[UIAlertView alloc]initWithTitle:@"Failed" message:[NSString stringWithFormat:@"New Group could not be created. Please try again"] delegate:self cancelButtonTitle:nil otherButtonTitles:@"OK", nil];
-                                        [createdAlert show];
-                                        [createdAlert release];
-                                        
-                                        addGrp.enabled=TRUE;
-                                        backToMain.enabled=TRUE;
-                                        [tabVw setUserInteractionEnabled:TRUE];
-                                        myGroups.enabled=TRUE;
-                                        allGroups.enabled=TRUE;
-                                        connProgress.hidden=TRUE;
-                                        [connProgress stopAnimating];
-                                    }
-                                    else if(retval==0)
-                                    {
-                                        UIAlertView *connNullAlert=[[UIAlertView alloc]initWithTitle:@"Connection Error" message:@"Unable to contact server. Please try again." delegate:nil cancelButtonTitle:nil otherButtonTitles:@"OK", nil];
-                                        [connNullAlert show];
-                                        [connNullAlert release];
-                                        
-                                        addGrp.enabled=TRUE;
-                                        backToMain.enabled=TRUE;
-                                        [tabVw setUserInteractionEnabled:TRUE];
-                                        myGroups.enabled=TRUE;
-                                        allGroups.enabled=TRUE;
-                                        connProgress.hidden=TRUE;
-                                        [connProgress stopAnimating];
-                                    }
-                                });
-                            }
-                        });
+                        if(networkStatus==NotReachable)
+                        {
+                            UIAlertView *networkOfflineAlert=[[UIAlertView alloc]initWithTitle:@"No Internet Connection !" message:@"The internet appears offline. Could not complete the request" delegate:self cancelButtonTitle:nil otherButtonTitles:@"OK", nil];
+                            [networkOfflineAlert show];
+                            [networkOfflineAlert release];
+                            
+                            [tabVw setUserInteractionEnabled:TRUE];
+                            [tabVw setAlpha:1.0];
+                            connProgress.hidden=TRUE;
+                            [connProgress stopAnimating];
+                            addGrp.enabled=TRUE;
+                            backToMain.enabled=TRUE;
+                            myGroups.enabled=TRUE;
+                            allGroups.enabled=TRUE;
+                        }
+                        else
+                        {
+                            dispatch_async(dispatch_get_main_queue(), ^{
+                                [restObj createGroup :locationLat :locationLong :newGroupName :localUserNumber :newGroupPwd :localAccessToken :@"addGroup"];
+                            });
+                            
+                            double delayInSeconds = 4.0;
+                            dispatch_time_t popTime = dispatch_time(DISPATCH_TIME_NOW, (int64_t)(delayInSeconds * NSEC_PER_SEC));
+                            dispatch_after(popTime, dispatch_get_main_queue(), ^(void){
+                                NSLog(@"calling for status from server..");
+                                retval=[restObj returnValue];
+                                if(retval==1)
+                                {
+                                    UIAlertView *createdAlert=[[UIAlertView alloc]initWithTitle:@"Success" message:[NSString stringWithFormat:@"New Group Successfully created"] delegate:self cancelButtonTitle:nil otherButtonTitles:@"OK", nil];
+                                    [createdAlert show];
+                                    [createdAlert release];
+                                    
+                                    addGrp.enabled=TRUE;
+                                    backToMain.enabled=TRUE;
+                                    [tabVw setUserInteractionEnabled:TRUE];
+                                    myGroups.enabled=TRUE;
+                                    allGroups.enabled=TRUE;
+                                    connProgress.hidden=TRUE;
+                                    [connProgress stopAnimating];
+                                    
+                                    [self refreshUI];
+                                }
+                                else if(retval==-1)
+                                {
+                                    UIAlertView *createdAlert=[[UIAlertView alloc]initWithTitle:@"Failed" message:[NSString stringWithFormat:@"New Group could not be created. Please try again"] delegate:self cancelButtonTitle:nil otherButtonTitles:@"OK", nil];
+                                    [createdAlert show];
+                                    [createdAlert release];
+                                    
+                                    addGrp.enabled=TRUE;
+                                    backToMain.enabled=TRUE;
+                                    [tabVw setUserInteractionEnabled:TRUE];
+                                    myGroups.enabled=TRUE;
+                                    allGroups.enabled=TRUE;
+                                    connProgress.hidden=TRUE;
+                                    [connProgress stopAnimating];
+                                }
+                                else if(retval==0)
+                                {
+                                    double delayInSeconds = 2.0;
+                                    dispatch_time_t popTime = dispatch_time(DISPATCH_TIME_NOW, (int64_t)(delayInSeconds * NSEC_PER_SEC));
+                                    dispatch_after(popTime, dispatch_get_main_queue(), ^(void){
+                                        NSLog(@"calling for status from server..");
+                                        retval=[restObj returnValue];
+                                        if(retval==1)
+                                        {
+                                            UIAlertView *createdAlert=[[UIAlertView alloc]initWithTitle:@"Success" message:[NSString stringWithFormat:@"New Group Successfully created"] delegate:self cancelButtonTitle:nil otherButtonTitles:@"OK", nil];
+                                            [createdAlert show];
+                                            [createdAlert release];
+                                            
+                                            addGrp.enabled=TRUE;
+                                            backToMain.enabled=TRUE;
+                                            [tabVw setUserInteractionEnabled:TRUE];
+                                            myGroups.enabled=TRUE;
+                                            allGroups.enabled=TRUE;
+                                            connProgress.hidden=TRUE;
+                                            [connProgress stopAnimating];
+                                            
+                                            [self refreshUI];
+                                        }
+                                        else if(retval==-1)
+                                        {
+                                            UIAlertView *createdAlert=[[UIAlertView alloc]initWithTitle:@"Failed" message:[NSString stringWithFormat:@"New Group could not be created. Please try again"] delegate:self cancelButtonTitle:nil otherButtonTitles:@"OK", nil];
+                                            [createdAlert show];
+                                            [createdAlert release];
+                                            
+                                            addGrp.enabled=TRUE;
+                                            backToMain.enabled=TRUE;
+                                            [tabVw setUserInteractionEnabled:TRUE];
+                                            myGroups.enabled=TRUE;
+                                            allGroups.enabled=TRUE;
+                                            connProgress.hidden=TRUE;
+                                            [connProgress stopAnimating];
+                                        }
+                                        else if(retval==0)
+                                        {
+                                            UIAlertView *connNullAlert=[[UIAlertView alloc]initWithTitle:@"Connection Error" message:@"Unable to contact server. Please try again." delegate:nil cancelButtonTitle:nil otherButtonTitles:@"OK", nil];
+                                            [connNullAlert show];
+                                            [connNullAlert release];
+                                            
+                                            addGrp.enabled=TRUE;
+                                            backToMain.enabled=TRUE;
+                                            [tabVw setUserInteractionEnabled:TRUE];
+                                            myGroups.enabled=TRUE;
+                                            allGroups.enabled=TRUE;
+                                            connProgress.hidden=TRUE;
+                                            [connProgress stopAnimating];
+                                        }
+                                    });
+                                }
+                            });
+                        }
                     }
                 }
             }
@@ -1607,39 +1740,16 @@ int retypeGroupPasswordFieldCheck=0;
             [groupList removeAllObjects];
         }
         
-        //fetchMyGroupsQueue=dispatch_queue_create("fetchMyGroups", NULL);
-        dispatch_async(dispatch_get_main_queue(), ^(void){
-            [restObj showAllGroups:localUserNumber :locationLat :locationLong :localAccessToken :@"showGroups"];
-        });
+        /*Check for internet availability status*/
+        internetReachability = [Reachability reachabilityForInternetConnection];
+        NetworkStatus networkStatus = [internetReachability currentReachabilityStatus];
+        
+        if(networkStatus==NotReachable)
+        {
+            UIAlertView *networkOfflineAlert=[[UIAlertView alloc]initWithTitle:@"No Internet Connection !" message:@"The internet appears offline. Could not complete the request" delegate:self cancelButtonTitle:nil otherButtonTitles:@"OK", nil];
+            [networkOfflineAlert show];
+            [networkOfflineAlert release];
             
-        double delayInSeconds = 4.0;
-        dispatch_time_t popTime = dispatch_time(DISPATCH_TIME_NOW, (int64_t)(delayInSeconds *NSEC_PER_SEC));
-        dispatch_after(popTime, dispatch_get_main_queue(), ^(void){
-                
-        NSLog(@"calling for status from server..");
-        retval=[restObj returnValue];
-        if(retval==1)
-        {
-            double delayInSeconds = 0.3;
-            dispatch_time_t popTime = dispatch_time(DISPATCH_TIME_NOW, (int64_t)(delayInSeconds * NSEC_PER_SEC));
-            dispatch_after(popTime, dispatch_get_main_queue(), ^(void){
-                [self retrieveListOfGroups];
-                [tabVw setUserInteractionEnabled:TRUE];
-                [tabVw setAlpha:1.0];
-                connProgress.hidden=TRUE;
-                [connProgress stopAnimating];
-                addGrp.enabled=TRUE;
-                backToMain.enabled=TRUE;
-                myGroups.enabled=TRUE;
-                allGroups.enabled=TRUE;
-            });
-        }
-        else if(retval==-1)
-        {
-            UIAlertView *createdAlert=[[UIAlertView alloc]initWithTitle:@"Could not fetch groups" message:[NSString stringWithFormat:@"Groups could not be fetched for you at this time"] delegate:self cancelButtonTitle:@"OK" otherButtonTitles:nil, nil];
-            [createdAlert show];
-            [createdAlert release];
-                    
             [tabVw setUserInteractionEnabled:TRUE];
             [tabVw setAlpha:1.0];
             connProgress.hidden=TRUE;
@@ -1649,9 +1759,14 @@ int retypeGroupPasswordFieldCheck=0;
             myGroups.enabled=TRUE;
             allGroups.enabled=TRUE;
         }
-        else if(retval==0)
+        else
         {
-            double delayInSeconds = 2.0;
+            //fetchMyGroupsQueue=dispatch_queue_create("fetchMyGroups", NULL);
+            dispatch_async(dispatch_get_main_queue(), ^(void){
+                [restObj showAllGroups:localUserNumber :locationLat :locationLong :localAccessToken :@"showGroups"];
+            });
+            
+            double delayInSeconds = 4.0;
             dispatch_time_t popTime = dispatch_time(DISPATCH_TIME_NOW, (int64_t)(delayInSeconds *NSEC_PER_SEC));
             dispatch_after(popTime, dispatch_get_main_queue(), ^(void){
                 
@@ -1690,22 +1805,62 @@ int retypeGroupPasswordFieldCheck=0;
                 }
                 else if(retval==0)
                 {
-                    UIAlertView *connNullAlert=[[UIAlertView alloc]initWithTitle:@"Connection Error" message:@"Unable to contact server. Please try again." delegate:nil cancelButtonTitle:@"OK" otherButtonTitles:nil, nil];
-                    [connNullAlert show];
-                    [connNullAlert release];
-                    
-                    [tabVw setUserInteractionEnabled:TRUE];
-                    [tabVw setAlpha:1.0];
-                    connProgress.hidden=TRUE;
-                    [connProgress stopAnimating];
-                    addGrp.enabled=TRUE;
-                    backToMain.enabled=TRUE;
-                    myGroups.enabled=TRUE;
-                    allGroups.enabled=TRUE;
+                    double delayInSeconds = 2.0;
+                    dispatch_time_t popTime = dispatch_time(DISPATCH_TIME_NOW, (int64_t)(delayInSeconds *NSEC_PER_SEC));
+                    dispatch_after(popTime, dispatch_get_main_queue(), ^(void){
+                        
+                        NSLog(@"calling for status from server..");
+                        retval=[restObj returnValue];
+                        if(retval==1)
+                        {
+                            double delayInSeconds = 0.3;
+                            dispatch_time_t popTime = dispatch_time(DISPATCH_TIME_NOW, (int64_t)(delayInSeconds * NSEC_PER_SEC));
+                            dispatch_after(popTime, dispatch_get_main_queue(), ^(void){
+                                [self retrieveListOfGroups];
+                                [tabVw setUserInteractionEnabled:TRUE];
+                                [tabVw setAlpha:1.0];
+                                connProgress.hidden=TRUE;
+                                [connProgress stopAnimating];
+                                addGrp.enabled=TRUE;
+                                backToMain.enabled=TRUE;
+                                myGroups.enabled=TRUE;
+                                allGroups.enabled=TRUE;
+                            });
+                        }
+                        else if(retval==-1)
+                        {
+                            UIAlertView *createdAlert=[[UIAlertView alloc]initWithTitle:@"Could not fetch groups" message:[NSString stringWithFormat:@"Groups could not be fetched for you at this time"] delegate:self cancelButtonTitle:@"OK" otherButtonTitles:nil, nil];
+                            [createdAlert show];
+                            [createdAlert release];
+                            
+                            [tabVw setUserInteractionEnabled:TRUE];
+                            [tabVw setAlpha:1.0];
+                            connProgress.hidden=TRUE;
+                            [connProgress stopAnimating];
+                            addGrp.enabled=TRUE;
+                            backToMain.enabled=TRUE;
+                            myGroups.enabled=TRUE;
+                            allGroups.enabled=TRUE;
+                        }
+                        else if(retval==0)
+                        {
+                            UIAlertView *connNullAlert=[[UIAlertView alloc]initWithTitle:@"Connection Error" message:@"Unable to contact server. Please try again." delegate:nil cancelButtonTitle:@"OK" otherButtonTitles:nil, nil];
+                            [connNullAlert show];
+                            [connNullAlert release];
+                            
+                            [tabVw setUserInteractionEnabled:TRUE];
+                            [tabVw setAlpha:1.0];
+                            connProgress.hidden=TRUE;
+                            [connProgress stopAnimating];
+                            addGrp.enabled=TRUE;
+                            backToMain.enabled=TRUE;
+                            myGroups.enabled=TRUE;
+                            allGroups.enabled=TRUE;
+                        }
+                    });
                 }
-            });
+            });  
         }
-        });
     }
     else if (item==myGroups)
     {
@@ -1728,95 +1883,117 @@ int retypeGroupPasswordFieldCheck=0;
             [groupList removeAllObjects];
         }
         
-        //fetchOtherGroupsQueue=dispatch_queue_create("fetchOtherGroups", NULL);
-        dispatch_async(dispatch_get_main_queue(), ^(void){
-            [restObj showMyGroups:localUserNumber:locationLat:locationLong:localAccessToken :@"listMemberGroups"];
-        });
+        /*Check for internet availability status*/
+        internetReachability = [Reachability reachabilityForInternetConnection];
+        NetworkStatus networkStatus = [internetReachability currentReachabilityStatus];
         
-        double delayInSeconds = 4.0;
-        dispatch_time_t popTime = dispatch_time(DISPATCH_TIME_NOW, (int64_t)(delayInSeconds * NSEC_PER_SEC));
-        dispatch_after(popTime, dispatch_get_main_queue(), ^(void){
+        if(networkStatus==NotReachable)
+        {
+            UIAlertView *networkOfflineAlert=[[UIAlertView alloc]initWithTitle:@"No Internet Connection !" message:@"The internet appears offline. Could not complete the request" delegate:self cancelButtonTitle:nil otherButtonTitles:@"OK", nil];
+            [networkOfflineAlert show];
+            [networkOfflineAlert release];
             
-            NSLog(@"calling for status from server..");
-            retval=[restObj returnValue];
-            if(retval==1)
-            {
-                [self retrieveListOfGroups];
-                [tabVw setUserInteractionEnabled:TRUE];
-                [tabVw setAlpha:1.0];
-                connProgress.hidden=TRUE;
-                [connProgress stopAnimating];
-                addGrp.enabled=TRUE;
-                backToMain.enabled=TRUE;
-                myGroups.enabled=TRUE;
-                allGroups.enabled=TRUE;
-            }
-            else if(retval==-1)
-            {
-                UIAlertView *createdAlert=[[UIAlertView alloc]initWithTitle:@"Could not fetch groups" message:[NSString stringWithFormat:@"Groups could not be fetched for you at this time"] delegate:self cancelButtonTitle:@"OK"otherButtonTitles:nil, nil];
-                [createdAlert show];
-                [createdAlert release];
+            [tabVw setUserInteractionEnabled:TRUE];
+            [tabVw setAlpha:1.0];
+            connProgress.hidden=TRUE;
+            [connProgress stopAnimating];
+            addGrp.enabled=TRUE;
+            backToMain.enabled=TRUE;
+            myGroups.enabled=TRUE;
+            allGroups.enabled=TRUE;
+        }
+        else
+        {
+            //fetchOtherGroupsQueue=dispatch_queue_create("fetchOtherGroups", NULL);
+            dispatch_async(dispatch_get_main_queue(), ^(void){
+                [restObj showMyGroups:localUserNumber:locationLat:locationLong:localAccessToken :@"listMemberGroups"];
+            });
+            
+            double delayInSeconds = 4.0;
+            dispatch_time_t popTime = dispatch_time(DISPATCH_TIME_NOW, (int64_t)(delayInSeconds * NSEC_PER_SEC));
+            dispatch_after(popTime, dispatch_get_main_queue(), ^(void){
                 
-                [tabVw setUserInteractionEnabled:TRUE];
-                connProgress.hidden=TRUE;
-                [connProgress stopAnimating];
-                addGrp.enabled=TRUE;
-                backToMain.enabled=TRUE;
-                myGroups.enabled=TRUE;
-                allGroups.enabled=TRUE;
-            }
-            else if(retval==0)
-            {
-                double delayInSeconds = 2.0;
-                dispatch_time_t popTime = dispatch_time(DISPATCH_TIME_NOW, (int64_t)(delayInSeconds * NSEC_PER_SEC));
-                dispatch_after(popTime, dispatch_get_main_queue(), ^(void){
+                NSLog(@"calling for status from server..");
+                retval=[restObj returnValue];
+                if(retval==1)
+                {
+                    [self retrieveListOfGroups];
+                    [tabVw setUserInteractionEnabled:TRUE];
+                    [tabVw setAlpha:1.0];
+                    connProgress.hidden=TRUE;
+                    [connProgress stopAnimating];
+                    addGrp.enabled=TRUE;
+                    backToMain.enabled=TRUE;
+                    myGroups.enabled=TRUE;
+                    allGroups.enabled=TRUE;
+                }
+                else if(retval==-1)
+                {
+                    UIAlertView *createdAlert=[[UIAlertView alloc]initWithTitle:@"Could not fetch groups" message:[NSString stringWithFormat:@"Groups could not be fetched for you at this time"] delegate:self cancelButtonTitle:@"OK"otherButtonTitles:nil, nil];
+                    [createdAlert show];
+                    [createdAlert release];
                     
-                    NSLog(@"calling for status from server..");
-                    retval=[restObj returnValue];
-                    if(retval==1)
-                    {
-                        [self retrieveListOfGroups];
-                        [tabVw setUserInteractionEnabled:TRUE];
-                        [tabVw setAlpha:1.0];
-                        connProgress.hidden=TRUE;
-                        [connProgress stopAnimating];
-                        addGrp.enabled=TRUE;
-                        backToMain.enabled=TRUE;
-                        myGroups.enabled=TRUE;
-                        allGroups.enabled=TRUE;
-                    }
-                    else if(retval==-1)
-                    {
-                        UIAlertView *createdAlert=[[UIAlertView alloc]initWithTitle:@"Could not fetch groups" message:[NSString stringWithFormat:@"Groups could not be fetched for you at this time"] delegate:self cancelButtonTitle:@"OK"otherButtonTitles:nil, nil];
-                        [createdAlert show];
-                        [createdAlert release];
+                    [tabVw setUserInteractionEnabled:TRUE];
+                    connProgress.hidden=TRUE;
+                    [connProgress stopAnimating];
+                    addGrp.enabled=TRUE;
+                    backToMain.enabled=TRUE;
+                    myGroups.enabled=TRUE;
+                    allGroups.enabled=TRUE;
+                }
+                else if(retval==0)
+                {
+                    double delayInSeconds = 2.0;
+                    dispatch_time_t popTime = dispatch_time(DISPATCH_TIME_NOW, (int64_t)(delayInSeconds * NSEC_PER_SEC));
+                    dispatch_after(popTime, dispatch_get_main_queue(), ^(void){
                         
-                        [tabVw setUserInteractionEnabled:TRUE];
-                        connProgress.hidden=TRUE;
-                        [connProgress stopAnimating];
-                        addGrp.enabled=TRUE;
-                        backToMain.enabled=TRUE;
-                        myGroups.enabled=TRUE;
-                        allGroups.enabled=TRUE;
-                    }
-                    else if(retval==0)
-                    {
-                        UIAlertView *connNullAlert=[[UIAlertView alloc]initWithTitle:@"Connection Error" message:@"Unable to contact server. Please try again." delegate:nil cancelButtonTitle:nil otherButtonTitles:@"OK", nil];
-                        [connNullAlert show];
-                        [connNullAlert release];
-                        
-                        [tabVw setUserInteractionEnabled:TRUE];
-                        [tabVw setAlpha:1.0];
-                        connProgress.hidden=TRUE;
-                        [connProgress stopAnimating];
-                        addGrp.enabled=TRUE;
-                        backToMain.enabled=TRUE;
-                        myGroups.enabled=TRUE;
-                        allGroups.enabled=TRUE;
-                    }
-                });
-            }
-        });
+                        NSLog(@"calling for status from server..");
+                        retval=[restObj returnValue];
+                        if(retval==1)
+                        {
+                            [self retrieveListOfGroups];
+                            [tabVw setUserInteractionEnabled:TRUE];
+                            [tabVw setAlpha:1.0];
+                            connProgress.hidden=TRUE;
+                            [connProgress stopAnimating];
+                            addGrp.enabled=TRUE;
+                            backToMain.enabled=TRUE;
+                            myGroups.enabled=TRUE;
+                            allGroups.enabled=TRUE;
+                        }
+                        else if(retval==-1)
+                        {
+                            UIAlertView *createdAlert=[[UIAlertView alloc]initWithTitle:@"Could not fetch groups" message:[NSString stringWithFormat:@"Groups could not be fetched for you at this time"] delegate:self cancelButtonTitle:@"OK"otherButtonTitles:nil, nil];
+                            [createdAlert show];
+                            [createdAlert release];
+                            
+                            [tabVw setUserInteractionEnabled:TRUE];
+                            connProgress.hidden=TRUE;
+                            [connProgress stopAnimating];
+                            addGrp.enabled=TRUE;
+                            backToMain.enabled=TRUE;
+                            myGroups.enabled=TRUE;
+                            allGroups.enabled=TRUE;
+                        }
+                        else if(retval==0)
+                        {
+                            UIAlertView *connNullAlert=[[UIAlertView alloc]initWithTitle:@"Connection Error" message:@"Unable to contact server. Please try again." delegate:nil cancelButtonTitle:nil otherButtonTitles:@"OK", nil];
+                            [connNullAlert show];
+                            [connNullAlert release];
+                            
+                            [tabVw setUserInteractionEnabled:TRUE];
+                            [tabVw setAlpha:1.0];
+                            connProgress.hidden=TRUE;
+                            [connProgress stopAnimating];
+                            addGrp.enabled=TRUE;
+                            backToMain.enabled=TRUE;
+                            myGroups.enabled=TRUE;
+                            allGroups.enabled=TRUE;
+                        }
+                    });
+                }
+            });
+        }
     }
 }
 

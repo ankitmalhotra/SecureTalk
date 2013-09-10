@@ -12,10 +12,12 @@
 #import "newPostViewController.h"
 #import "messengerRESTclient.h"
 #import "loginViewController.h"
+#import "Reachability.h"
 
 @class messengerViewController;
 @class messengerRESTclient;
 @class newPostViewController;
+@class Reachability;
 
 @interface groupsTableViewViewController : UIViewController
          <UITableViewDataSource,UITableViewDelegate,UIAlertViewDelegate,UITabBarDelegate,UITextFieldDelegate>
@@ -48,6 +50,8 @@
 
     int retval;
     BOOL isSecured;
+    
+    Reachability *internetReachability;
     
     messengerViewController *mainViewObj;
     messengerRESTclient *restObj;

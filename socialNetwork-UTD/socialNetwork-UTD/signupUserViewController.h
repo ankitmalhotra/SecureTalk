@@ -10,11 +10,13 @@
 #import "messengerViewController.h"
 #import "messengerRESTclient.h"
 #import "messengerAppDelegate.h"
+#import "Reachability.h"
 
 /*use this forward declaration to avoid class parse issues*/
 @class messengerRESTclient;
 @class messengerAppDelegate;
 @class messengerViewController;
+@class Reachability;
 
 @interface signupUserViewController : UIViewController
 {
@@ -38,6 +40,8 @@
     NSData *deviceToken;
     
     int retVal;
+    
+    Reachability *internetReachability;
     
     messengerRESTclient *restObj;
     messengerAppDelegate *appDelegateObj;

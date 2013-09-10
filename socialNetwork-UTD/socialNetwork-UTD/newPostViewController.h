@@ -9,9 +9,11 @@
 #import <UIKit/UIKit.h>
 #import "messengerRESTclient.h"
 #import "messengerViewController.h"
+#import "Reachability.h"
 
 @class messengerRESTclient;
 @class messengerViewController;
+@class Reachability;
 
 @interface newPostViewController : UIViewController<UITextViewDelegate>
 {    
@@ -28,6 +30,8 @@
     int retVal;
     int txtLength;
     NSString *lblString;
+    
+    Reachability *internetReachability;
     
     messengerRESTclient *restObj;
     messengerViewController *mainViewObj;

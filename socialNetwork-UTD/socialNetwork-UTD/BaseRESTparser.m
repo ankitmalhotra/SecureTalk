@@ -94,7 +94,7 @@ static NSString *serviceEndPoint;
         else if([serviceEndPoint isEqualToString:@"listMemberGroups"])
         {
             callRESTclient=[[messengerRESTclient alloc]init];
-             NSLog(@"calling groups list check with: %@",mainContents);
+             //NSLog(@"calling groups list check with: %@",mainContents);
             /*
              if([mainContents containsObject:@"false"])
              {
@@ -113,7 +113,7 @@ static NSString *serviceEndPoint;
         else if([serviceEndPoint isEqualToString:@"getUsersInGroup"])
         {
             callRESTclient=[[messengerRESTclient alloc]init];
-            NSLog(@"calling friends list check with: %@",mainContents);
+            //NSLog(@"calling friends list check with: %@",mainContents);
             if([mainContents containsObject:@"false"])
             {
                 [mainContents removeObject:@"false"];
@@ -189,7 +189,7 @@ static NSString *serviceEndPoint;
         else if ([serviceEndPoint isEqualToString:@"showGroups"])
         {
             callRESTclient=[[messengerRESTclient alloc]init];
-            NSLog(@"calling all groups list check with: %@",mainContents);
+            //NSLog(@"calling all groups list check with: %@",mainContents);
             /*
             if([mainContents containsObject:@"false"])
             {

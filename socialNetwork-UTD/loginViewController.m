@@ -113,135 +113,148 @@ static int const MAX_RETRY=5;
     }
     else
     {
-        /*Start REST request*/
-        spinningView.hidden=FALSE;
-        spinningView.transform=CGAffineTransformMakeScale(1.5, 1.5);
-        [spinningView startAnimating];
+        /*Check for internet availability status*/
+        internetReachability = [Reachability reachabilityForInternetConnection];
+        NetworkStatus networkStatus = [internetReachability currentReachabilityStatus];
         
-        /*First Check if login data already received by main View*/
-        mainViewObj=[[messengerViewController alloc]init];
-        loginStatusChk=[mainViewObj tellLoginStatus];
-        if(loginStatusChk==1)
+        if(networkStatus==NotReachable)
         {
-            double delayInSeconds = 2.0;
-            dispatch_time_t popTime = dispatch_time(DISPATCH_TIME_NOW, (int64_t)(delayInSeconds * NSEC_PER_SEC));
-            dispatch_after(popTime, dispatch_get_main_queue(), ^(void){
-                /*Push back main view*/
-                messengerViewController *mainVw=[[messengerViewController alloc]initWithNibName:nil bundle:nil];
-                [self presentViewController:mainVw animated:YES completion:NULL];
-                [spinningView stopAnimating];
-                [mainVw release];
-            });
+            UIAlertView *networkOfflineAlert=[[UIAlertView alloc]initWithTitle:@"No Internet Connection !" message:@"The internet appears offline. Could not complete the request" delegate:self cancelButtonTitle:nil otherButtonTitles:@"OK", nil];
+            [networkOfflineAlert show];
+            [networkOfflineAlert release];
+            
+            loginBtn.enabled=TRUE;
+            signupBtn.enabled=TRUE;
+            nameField.enabled=TRUE;
+            passwordField.enabled=TRUE;
+            forgotPasswordBtn.enabled=TRUE;
         }
         else
         {
-            /*Pass this username to server*/
-            [restObj userLogin:userId :userPwd :@"login"];
+            /*Start REST request*/
+            spinningView.hidden=FALSE;
+            spinningView.transform=CGAffineTransformMakeScale(1.5, 1.5);
+            [spinningView startAnimating];
             
-            double delayInSeconds = 5.0;
-            dispatch_time_t popTime = dispatch_time(DISPATCH_TIME_NOW, (int64_t)(delayInSeconds * NSEC_PER_SEC));
-            dispatch_after(popTime, dispatch_get_main_queue(), ^(void){
-                
-                NSLog(@"calling for status !");
-                receivedStatus=[restObj returnValue];
-                NSLog(@"status received:%d",receivedStatus);
-                if(receivedStatus==1)
-                {
-                    /*Signal username to main view*/
-                    mainViewObj=[[messengerViewController alloc]init];
-                    [mainViewObj getUserId:userId:userPwd];
-                    [mainViewObj release];
-                    
-                    [self setField:nameField forKey:kXMPPmyJID];
-                    [self setField:passwordField forKey:kXMPPmyPassword];
-                    
-                    /*Generate Key Pairs routine*/
-                    [secureMessageRSA generateKeyPairs];
-                    
+            /*First Check if login data already received by main View*/
+            mainViewObj=[[messengerViewController alloc]init];
+            loginStatusChk=[mainViewObj tellLoginStatus];
+            if(loginStatusChk==1)
+            {
+                double delayInSeconds = 2.0;
+                dispatch_time_t popTime = dispatch_time(DISPATCH_TIME_NOW, (int64_t)(delayInSeconds * NSEC_PER_SEC));
+                dispatch_after(popTime, dispatch_get_main_queue(), ^(void){
                     /*Push back main view*/
                     messengerViewController *mainVw=[[messengerViewController alloc]initWithNibName:nil bundle:nil];
                     [self presentViewController:mainVw animated:YES completion:NULL];
                     [spinningView stopAnimating];
                     [mainVw release];
-                }
-                else if(receivedStatus==-1)
-                {
-                    UIAlertView *loginFail=[[UIAlertView alloc]initWithTitle:@"Login Failed" message:@"Please check the login credentials" delegate:nil cancelButtonTitle:@"Ok" otherButtonTitles:nil, nil];
-                    [loginFail show];
-                    [loginFail release];
-                    [spinningView stopAnimating];
-                    spinningView.hidden=TRUE;
-                    loginBtn.enabled=TRUE;
-                    signupBtn.enabled=TRUE;
-                    nameField.enabled=TRUE;
-                    passwordField.enabled=TRUE;
-                    forgotPasswordBtn.enabled=TRUE;
-                }
-                else if(receivedStatus==0)
-                {
-                    /*Try again*/
-                    NSLog(@"retrying due to slow connection..");
-                    double delayInSeconds = 5.0;
-                    dispatch_time_t popTime = dispatch_time(DISPATCH_TIME_NOW, (int64_t)(delayInSeconds * NSEC_PER_SEC));
-                    dispatch_after(popTime, dispatch_get_main_queue(), ^(void){
-                        
-                        receivedStatus=[restObj returnValue];
-                        NSLog(@"status received:%d",receivedStatus);
-                        if(receivedStatus==1)
-                        {
-                            /*Signal username to main view*/
-                            mainViewObj=[[messengerViewController alloc]init];
-                            [mainViewObj getUserId:userId:userPwd];
-                            [mainViewObj release];
-                            
-                            [self setField:nameField forKey:kXMPPmyJID];
-                            [self setField:passwordField forKey:kXMPPmyPassword];
-                            
-                            /*Generate Key Pairs routine*/
-                            [secureMessageRSA generateKeyPairs];
-                            
-                            /*Push back main view*/
-                            messengerViewController *mainVw=[[messengerViewController alloc]initWithNibName:nil bundle:nil];
-                            [self presentViewController:mainVw animated:YES completion:NULL];
-                            [spinningView stopAnimating];
-                            [mainVw release];
-                        }
-                        else if(receivedStatus==-1)
-                        {
-                            UIAlertView *loginFail=[[UIAlertView alloc]initWithTitle:@"Login Failed" message:@"Please check the login credentials" delegate:nil cancelButtonTitle:@"Ok" otherButtonTitles:nil, nil];
-                            [loginFail show];
-                            [loginFail release];
-                            [spinningView stopAnimating];
-                            spinningView.hidden=TRUE;
-                            loginBtn.enabled=TRUE;
-                            signupBtn.enabled=TRUE;
-                            nameField.enabled=TRUE;
-                            passwordField.enabled=TRUE;
-                            forgotPasswordBtn.enabled=TRUE;
-                        }
-                        else if(receivedStatus==0)
-                        {
-                            /*Signal username to main view*/
-                            mainViewObj=[[messengerViewController alloc]init];
-                            [mainViewObj getUserId:userId:userPwd];
-                            [mainViewObj release];
-                            
-                            UIAlertView *connNullAlert=[[UIAlertView alloc]initWithTitle:@"Connection Error" message:@"Unable to contact server. Please try again or try on a WiFi network" delegate:nil cancelButtonTitle:@"Ok" otherButtonTitles:nil, nil];
-                            [connNullAlert show];
-                            [connNullAlert release];
-                            [spinningView stopAnimating];
-                            spinningView.hidden=TRUE;
-                            loginBtn.enabled=TRUE;
-                            signupBtn.enabled=TRUE;
-                            nameField.enabled=TRUE;
-                            passwordField.enabled=TRUE;
-                            forgotPasswordBtn.enabled=TRUE;
-                        }
-                    });
-                    
-                }
+                });
+            }
+            else
+            {
+                /*Pass this username to server*/
+                [restObj userLogin:userId :userPwd :@"login"];
                 
-            });
+                double delayInSeconds = 5.0;
+                dispatch_time_t popTime = dispatch_time(DISPATCH_TIME_NOW, (int64_t)(delayInSeconds * NSEC_PER_SEC));
+                dispatch_after(popTime, dispatch_get_main_queue(), ^(void){
+                    
+                    NSLog(@"calling for status !");
+                    receivedStatus=[restObj returnValue];
+                    NSLog(@"status received:%d",receivedStatus);
+                    if(receivedStatus==1)
+                    {
+                        /*Signal username to main view*/
+                        mainViewObj=[[messengerViewController alloc]init];
+                        [mainViewObj getUserId:userId:userPwd];
+                        [mainViewObj release];
+                        
+                        [self setField:nameField forKey:kXMPPmyJID];
+                        [self setField:passwordField forKey:kXMPPmyPassword];
+                        
+                        /*Push back main view*/
+                        messengerViewController *mainVw=[[messengerViewController alloc]initWithNibName:nil bundle:nil];
+                        [self presentViewController:mainVw animated:YES completion:NULL];
+                        [spinningView stopAnimating];
+                        [mainVw release];
+                    }
+                    else if(receivedStatus==-1)
+                    {
+                        UIAlertView *loginFail=[[UIAlertView alloc]initWithTitle:@"Login Failed" message:@"Please check the login credentials" delegate:nil cancelButtonTitle:@"Ok" otherButtonTitles:nil, nil];
+                        [loginFail show];
+                        [loginFail release];
+                        [spinningView stopAnimating];
+                        spinningView.hidden=TRUE;
+                        loginBtn.enabled=TRUE;
+                        signupBtn.enabled=TRUE;
+                        nameField.enabled=TRUE;
+                        passwordField.enabled=TRUE;
+                        forgotPasswordBtn.enabled=TRUE;
+                    }
+                    else if(receivedStatus==0)
+                    {
+                        /*Try again*/
+                        NSLog(@"retrying due to slow connection..");
+                        double delayInSeconds = 5.0;
+                        dispatch_time_t popTime = dispatch_time(DISPATCH_TIME_NOW, (int64_t)(delayInSeconds * NSEC_PER_SEC));
+                        dispatch_after(popTime, dispatch_get_main_queue(), ^(void){
+                            
+                            receivedStatus=[restObj returnValue];
+                            NSLog(@"status received:%d",receivedStatus);
+                            if(receivedStatus==1)
+                            {
+                                /*Signal username to main view*/
+                                mainViewObj=[[messengerViewController alloc]init];
+                                [mainViewObj getUserId:userId:userPwd];
+                                [mainViewObj release];
+                                
+                                [self setField:nameField forKey:kXMPPmyJID];
+                                [self setField:passwordField forKey:kXMPPmyPassword];
+                                
+                                /*Push back main view*/
+                                messengerViewController *mainVw=[[messengerViewController alloc]initWithNibName:nil bundle:nil];
+                                [self presentViewController:mainVw animated:YES completion:NULL];
+                                [spinningView stopAnimating];
+                                [mainVw release];
+                            }
+                            else if(receivedStatus==-1)
+                            {
+                                UIAlertView *loginFail=[[UIAlertView alloc]initWithTitle:@"Login Failed" message:@"Please check the login credentials" delegate:nil cancelButtonTitle:@"Ok" otherButtonTitles:nil, nil];
+                                [loginFail show];
+                                [loginFail release];
+                                [spinningView stopAnimating];
+                                spinningView.hidden=TRUE;
+                                loginBtn.enabled=TRUE;
+                                signupBtn.enabled=TRUE;
+                                nameField.enabled=TRUE;
+                                passwordField.enabled=TRUE;
+                                forgotPasswordBtn.enabled=TRUE;
+                            }
+                            else if(receivedStatus==0)
+                            {
+                                /*Signal username to main view*/
+                                mainViewObj=[[messengerViewController alloc]init];
+                                [mainViewObj getUserId:userId:userPwd];
+                                [mainViewObj release];
+                                
+                                UIAlertView *connNullAlert=[[UIAlertView alloc]initWithTitle:@"Connection Error" message:@"Unable to contact server. Please try again or try on a WiFi network" delegate:nil cancelButtonTitle:@"Ok" otherButtonTitles:nil, nil];
+                                [connNullAlert show];
+                                [connNullAlert release];
+                                [spinningView stopAnimating];
+                                spinningView.hidden=TRUE;
+                                loginBtn.enabled=TRUE;
+                                signupBtn.enabled=TRUE;
+                                nameField.enabled=TRUE;
+                                passwordField.enabled=TRUE;
+                                forgotPasswordBtn.enabled=TRUE;
+                            }
+                        });
+                        
+                    }
+                    
+                });
+            }
         }
     }
 }

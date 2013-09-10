@@ -8,12 +8,13 @@
 
 #import <UIKit/UIKit.h>
 #import "messengerViewController.h"
-#import "secureMessageRSA.h"
 #import "messengerRESTclient.h"
+#import "Reachability.h"
 
 
 @class messengerRESTclient;
 @class messengerViewController;
+@class Reachability;
 
 @interface loginViewController : UIViewController<UIAlertViewDelegate,UITextFieldDelegate>
 {
@@ -33,6 +34,8 @@
     UITextField *emailField;
     UIButton *sendPasswordBtn;
     UIButton *closeBtn;
+    
+    Reachability *internetReachability;
     
     messengerRESTclient *restObj;
     messengerViewController *mainViewObj;
